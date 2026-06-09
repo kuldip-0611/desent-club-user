@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 }
 
 type ProductsRouteProps = {
-  searchParams: Promise<{ category?: string; audience?: string }>
+  searchParams: Promise<{ category?: string; audience?: string; subcategory?: string }>
 }
 
 export default async function ProductsRoute({ searchParams }: ProductsRouteProps) {
@@ -18,6 +18,7 @@ export default async function ProductsRoute({ searchParams }: ProductsRouteProps
       <ProductsPageModule
         initialCategory={params.category ?? 'all'}
         initialAudience={params.audience ?? 'all'}
+        initialSubcategory={params.subcategory ?? ''}
       />
     </StoreShell>
   )

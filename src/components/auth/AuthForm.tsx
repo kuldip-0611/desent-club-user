@@ -4,9 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Form, Formik, ErrorMessage } from 'formik';
 import toast from 'react-hot-toast';
+import { PasswordInput } from '@/components/ui/password-input';
 import type { AuthAction } from '@/src/types/auth';
+import { GoogleSignInButton } from '@/src/components/auth/GoogleSignInButton';
 import { useRegisterMutation, useUserLoginMutation } from '@/src/hooks/useAuthMutations';
-import { setAuthSession, setOtpContext } from '@/src/utils/auth';
+import { loginWithGoogle } from '@/src/services/auth';
+import { setOtpContext } from '@/src/utils/auth';
+import { useAuthStore } from '@/store/auth-store';
 import { loginEmailPasswordSchema, registerWithPasswordSchema } from '@/src/utils/validation';
 
 type LoginValues = {
@@ -40,22 +44,45 @@ const secondaryRouteMap: Record<AuthAction, { href: string; label: string; cta: 
 
 export const AuthForm = ({ action }: AuthFormProps) => {
   const router = useRouter();
+  const setAuthResponse = useAuthStore((s) => s.setAuthResponse);
   const registerMutation = useRegisterMutation();
   const loginMutation = useUserLoginMutation();
   const secondaryRoute = secondaryRouteMap[action];
 
+  const handleGoogleSignIn = async (token: string) => {
+    try {
+      const response = await loginWithGoogle(token);
+      setAuthResponse(response);
+      toast.success('Signed in with Google');
+      router.push('/home');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google sign-in failed';
+      toast.error(message);
+    }
+  };
+
   if (action === 'login') {
     return (
       <>
+        <GoogleSignInButton
+          variant="auth"
+          disabled={loginMutation.isPending}
+          onCredential={handleGoogleSignIn}
+        />
+        <div className="my-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-white/20" />
+          <span className="text-xs text-white/60">or</span>
+          <span className="h-px flex-1 bg-white/20" />
+        </div>
         <Formik<LoginValues>
           initialValues={{ email: '', password: '' }}
           validationSchema={loginEmailPasswordSchema}
           onSubmit={async (values) => {
             try {
               const response = await loginMutation.mutateAsync(values);
-              setAuthSession(response.accessToken, response.user);
+              setAuthResponse(response);
               toast.success('Signed in successfully');
-              router.push('/dashboard');
+              router.push('/home');
             } catch (error) {
               const message = error instanceof Error ? error.message : 'Login failed';
               toast.error(message);
@@ -91,20 +118,29 @@ export const AuthForm = ({ action }: AuthFormProps) => {
                   <label htmlFor="password" className="mb-1 block text-sm font-medium text-white/85">
                     Password
                   </label>
-                  <input
+                  <PasswordInput
                     id="password"
                     name="password"
-                    type="password"
                     autoComplete="current-password"
                     placeholder="••••••••"
                     value={values.password}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-sky-300 focus:outline-none"
+                    toggleVariant="auth"
+                    className="h-auto w-full rounded-xl border border-white/20 bg-white/10 py-2.5 pr-10 text-sm text-white placeholder:text-white/50 focus:border-sky-300 focus:outline-none focus:ring-0"
                   />
                   <p className="mt-1 text-xs text-red-500">
                     <ErrorMessage name="password" />
                   </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs font-medium text-white/80 hover:text-white hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
 
                 <button
@@ -143,9 +179,8 @@ export const AuthForm = ({ action }: AuthFormProps) => {
             });
             setOtpContext({
               action: 'register',
-              method: 'email',
-              value: values.email,
-              name: values.name,
+              email: values.email.trim(),
+              name: values.name.trim(),
             });
             toast.success(message);
             router.push('/verify-otp');
@@ -204,16 +239,16 @@ export const AuthForm = ({ action }: AuthFormProps) => {
                 <label htmlFor="password" className="mb-1 block text-sm font-medium text-white/85">
                   Password
                 </label>
-                <input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   autoComplete="new-password"
                   placeholder="At least 8 characters"
                   value={values.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-sky-300 focus:outline-none"
+                  toggleVariant="auth"
+                  className="h-auto w-full rounded-xl border border-white/20 bg-white/10 py-2.5 pr-10 text-sm text-white placeholder:text-white/50 focus:border-sky-300 focus:outline-none focus:ring-0"
                 />
                 <p className="mt-1 text-xs text-red-500">
                   <ErrorMessage name="password" />
@@ -224,16 +259,16 @@ export const AuthForm = ({ action }: AuthFormProps) => {
                 <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-white/85">
                   Confirm password
                 </label>
-                <input
+                <PasswordInput
                   id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
                   autoComplete="new-password"
                   placeholder="Repeat password"
                   value={values.confirmPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-sky-300 focus:outline-none"
+                  toggleVariant="auth"
+                  className="h-auto w-full rounded-xl border border-white/20 bg-white/10 py-2.5 pr-10 text-sm text-white placeholder:text-white/50 focus:border-sky-300 focus:outline-none focus:ring-0"
                 />
                 <p className="mt-1 text-xs text-red-500">
                   <ErrorMessage name="confirmPassword" />

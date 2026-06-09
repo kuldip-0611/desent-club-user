@@ -39,12 +39,34 @@ export const HomePageModule = () => {
       </section>
 
       <section>
-        <h2 className="mb-5 text-2xl font-bold">Trending categories</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.slice(0, 4).map((item) => (
-            <Link key={item.id} href={`/products?category=${item.slug}`} className="rounded-2xl border border-slate-200 bg-white p-6 hover:bg-slate-50">
-              <p className="text-lg font-semibold">{item.name}</p>
-              <p className="mt-1 text-sm text-slate-500">Curated with premium silhouettes.</p>
+        <h2 className="mb-5 text-2xl font-bold">Shop by category</h2>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          {categories.map((item) => (
+            <Link
+              key={item.id}
+              href={`/products?category=${item.slug}`}
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-md"
+            >
+              {item.image ? (
+                <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                  <Image src={item.image} alt={item.name} fill className="object-cover transition duration-500 group-hover:scale-105" />
+                </div>
+              ) : null}
+              <div className="space-y-2 p-5">
+                <p className="text-lg font-semibold">{item.name}</p>
+                <p className="text-sm text-slate-500">
+                  {item.productCount} product{item.productCount === 1 ? '' : 's'}
+                </p>
+                {item.subcategories.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {item.subcategories.slice(0, 4).map((sub) => (
+                      <span key={sub.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                        {sub.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </Link>
           ))}
         </div>
@@ -53,15 +75,21 @@ export const HomePageModule = () => {
       <section>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Best sellers</h2>
-          <Link href="/products" className="text-sm font-semibold text-indigo-600">View all</Link>
+          <Link href="/products" className="text-sm font-semibold text-indigo-600">
+            View all
+          </Link>
         </div>
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, idx) => <Skeleton key={idx} className="h-80" />)}
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <Skeleton key={idx} className="h-80" />
+            ))}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {bestSellers.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
+            {bestSellers.slice(0, 4).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
         )}
       </section>
@@ -69,13 +97,17 @@ export const HomePageModule = () => {
       <section className="rounded-3xl bg-slate-900 px-8 py-10 text-white">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Limited offer</p>
         <h3 className="mt-2 text-3xl font-black">Up to 40% off on selected performance styles</h3>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">Grab signature fits from our active and streetwear collections while stock lasts.</p>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+          Grab signature fits from our active and streetwear collections while stock lasts.
+        </p>
       </section>
 
       <section>
         <h2 className="mb-5 text-2xl font-bold">New arrivals</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {newArrivals.slice(0, 8).map((product) => <ProductCard key={`${product.id}-new`} product={product} />)}
+          {newArrivals.slice(0, 8).map((product) => (
+            <ProductCard key={`${product.id}-new`} product={product} />
+          ))}
         </div>
       </section>
 

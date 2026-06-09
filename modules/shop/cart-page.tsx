@@ -4,15 +4,15 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CartCouponsSection } from '@/modules/shop/components/cart-coupons-section'
 import { getCartSummary, useCartStore } from '@/store/cart-store'
 
 export const CartPageModule = () => {
   const lines = useCartStore((s) => s.lines)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeLine = useCartStore((s) => s.removeLine)
-  const applyCoupon = useCartStore((s) => s.applyCoupon)
-  const couponCode = useCartStore((s) => s.couponCode)
-  const summary = useMemo(() => getCartSummary(lines, couponCode), [lines, couponCode])
+  const couponDiscount = useCartStore((s) => s.couponDiscount)
+  const summary = useMemo(() => getCartSummary(lines, couponDiscount), [lines, couponDiscount])
 
   return (
     <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px] sm:px-6">
@@ -47,21 +47,16 @@ export const CartPageModule = () => {
         ))}
       </section>
 
-      <aside className="h-fit space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+      <aside className="h-fit space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-lg font-semibold">Summary</p>
         <div className="space-y-1 text-sm text-slate-600">
           <p>Subtotal: Rs. {summary.subtotal}</p>
-          <p>Discount: -Rs. {summary.discount}</p>
+          {summary.discount > 0 ? <p className="text-emerald-700">Discount: -Rs. {summary.discount}</p> : null}
           <p>Shipping: Rs. {summary.shipping}</p>
           <p>GST: Rs. {summary.gst}</p>
         </div>
         <p className="border-t border-slate-200 pt-2 text-base font-bold">Total: Rs. {summary.total}</p>
-        <div className="flex gap-2">
-          <Input placeholder="Coupon code" />
-          <Button variant="outline" onClick={() => applyCoupon('SAVE10')}>
-            Apply
-          </Button>
-        </div>
+        <CartCouponsSection />
         <Link href="/checkout">
           <Button className="w-full">Proceed to checkout</Button>
         </Link>

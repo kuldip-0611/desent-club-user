@@ -15,6 +15,7 @@ export type ShopCategory = {
   slug: string
   image: string | null
   productCount: number
+  subcategories: { id: string; name: string; slug: string; productCount: number }[]
 }
 
 export type ShopHomeResponse = {
@@ -41,12 +42,21 @@ const normalizeProduct = (product: Product): Product => ({
 })
 
 export const listProducts = async (filters: ProductFilters = {}): Promise<ProductListResponse> => {
+  const categoryParam = filters.category && filters.category !== 'all' ? filters.category : undefined
+  const subParam =
+    filters.subcategory?.trim() &&
+    categoryParam &&
+    filters.category &&
+    filters.category !== 'all'
+      ? filters.subcategory.trim().toLowerCase()
+      : undefined
   const { data } = await apiClient.get<ProductListResponse>('/shop/products', {
     params: {
       page: filters.page ?? 1,
       limit: filters.limit ?? 12,
       search: filters.search || undefined,
-      category: filters.category && filters.category !== 'all' ? filters.category : undefined,
+      category: categoryParam,
+      subcategory: subParam,
       audience: filters.audience && filters.audience !== 'all' ? filters.audience : undefined,
       sort: filters.sort || 'featured',
     },
@@ -66,7 +76,59 @@ export const listRelatedProducts = async (productSlug: string): Promise<Product[
 
 export const listShopCategories = async (): Promise<ShopCategory[]> => {
   const { data } = await apiClient.get<ShopCategory[]>('/shop/categories')
-  return data.map((item) => ({ ...item, image: item.image ? mediaUrl(item.image) : null }))
+  return data.map((item) => ({
+    ...item,
+    image: item.image ? mediaUrl(item.image) : null,
+    subcategories: (item.subcategories ?? []).map((s) => ({
+      ...s,
+    })),
+  }))
+}
+
+export type ProductReview = {
+  id: string
+  rating: number
+  comment: string | null
+  createdAt: string
+  user: { name: string }
+}
+
+export type ProductReviewsResponse = {
+  items: ProductReview[]
+  total: number
+  page: number
+  totalPages: number
+  averageRating: number
+  reviewsCount: number
+}
+
+export const getProductReviews = async (
+  productSlug: string,
+  page = 1,
+): Promise<ProductReviewsResponse> => {
+  const { data } = await apiClient.get<ProductReviewsResponse>(`/shop/products/${productSlug}/reviews`, {
+    params: { page, limit: 10 },
+  })
+  return data
+}
+
+export type SearchSuggestion = {
+  id: string
+  slug: string
+  name: string
+  price: number
+  compareAtPrice?: number
+  image: string | null
+  category: { slug: string; name: string } | null
+}
+
+export const searchProducts = async (q: string, limit = 8): Promise<SearchSuggestion[]> => {
+  if (!q || q.trim().length < 2) return []
+  const { data } = await apiClient.get<SearchSuggestion[]>('/shop/search', { params: { q, limit } })
+  return data.map((item) => ({
+    ...item,
+    image: item.image ? mediaUrl(item.image) : null,
+  }))
 }
 
 export const getShopHome = async (): Promise<ShopHomeResponse> => {
@@ -74,7 +136,11 @@ export const getShopHome = async (): Promise<ShopHomeResponse> => {
   return {
     ...data,
     banners: data.banners.map((banner) => ({ ...banner, image: mediaUrl(banner.image) })),
-    categories: data.categories.map((item) => ({ ...item, image: item.image ? mediaUrl(item.image) : null })),
+    categories: data.categories.map((item) => ({
+      ...item,
+      image: item.image ? mediaUrl(item.image) : null,
+      subcategories: item.subcategories ?? [],
+    })),
     featured: data.featured.map(normalizeProduct),
     newest: data.newest.map(normalizeProduct),
     bestSellers: data.bestSellers.map(normalizeProduct),

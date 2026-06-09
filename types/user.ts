@@ -1,5 +1,1 @@
-export type AuthUser = {
-  id: string
-  name: string
-  email: string
-}
+export type { AuthUser } from '@/types/auth'

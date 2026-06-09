@@ -24,11 +24,15 @@ export const Drawer = ({ open, onClose, title, children }: DrawerProps) => (
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="absolute right-0 top-0 h-full w-full max-w-md bg-white p-5 shadow-2xl"
+          className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
-          {title ? <h3 className="mb-4 text-lg font-semibold">{title}</h3> : null}
-          {children}
+          {title ? (
+            <h3 className="shrink-0 border-b border-slate-100 px-5 py-4 text-lg font-semibold">
+              {title}
+            </h3>
+          ) : null}
+          <div className="flex min-h-0 flex-1 flex-col px-5 pb-5 pt-4">{children}</div>
         </motion.aside>
       </motion.div>
     ) : null}

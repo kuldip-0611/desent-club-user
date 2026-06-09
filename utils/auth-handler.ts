@@ -1,12 +1,13 @@
+import type { AuthTokensResponse } from '@/types/auth'
 import { useAuthStore } from '@/store/auth-store'
 import { useCartStore } from '@/store/cart-store'
 
 export const useAuthHandler = () => {
-  const setSession = useAuthStore((s) => s.setSession)
+  const setAuthResponse = useAuthStore((s) => s.setAuthResponse)
   const lines = useCartStore((s) => s.lines)
 
-  const onLoginSuccess = (token: string, user: { id: string; name: string; email: string }) => {
-    setSession(token, user)
+  const onLoginSuccess = (response: AuthTokensResponse) => {
+    setAuthResponse(response)
     void lines
   }
 

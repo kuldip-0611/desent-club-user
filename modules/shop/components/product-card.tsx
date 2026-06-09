@@ -40,6 +40,22 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         />
       </Link>
       <div className="space-y-2 p-4">
+        <div className="flex flex-wrap gap-1">
+          <Link
+            href={`/products?category=${product.category.slug}`}
+            className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 hover:bg-slate-200"
+          >
+            {product.category.name}
+          </Link>
+          {product.subcategory ? (
+            <Link
+              href={`/products?category=${product.category.slug}&subcategory=${product.subcategory.slug}`}
+              className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 hover:bg-indigo-100"
+            >
+              {product.subcategory.name}
+            </Link>
+          ) : null}
+        </div>
         <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-1 text-sm font-semibold text-slate-900">{product.name}</h3>
           <button
@@ -61,22 +77,21 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <Button
             size="sm"
             className="flex-1"
-            onClick={() =>
-              {
-                addLine({
-                  productId: product.id,
-                  variantId: firstVariant.id,
-                  name: product.name,
-                  slug: product.slug,
-                  image: product.images[0],
-                  size: firstVariant.size,
+            onClick={() => {
+              addLine({
+                productId: product.id,
+                variantId: firstVariant.id,
+                categoryId: product.category.id,
+                name: product.name,
+                slug: product.slug,
+                image: product.images[0],
+                size: firstVariant.size,
                 color: firstVariant.colorName,
-                  unitPrice: product.price,
-                  quantity: 1,
-                })
-                toast.success(`${product.name} added to cart`)
-              }
-            }
+                unitPrice: product.price,
+                quantity: 1,
+              })
+              toast.success(`${product.name} added to cart`)
+            }}
           >
             <ShoppingBag className="mr-1 h-3.5 w-3.5" />
             Add +1

@@ -20,7 +20,7 @@ export const Footer = () => {
         <div>
           <p className="mb-2 text-sm font-semibold">Shop</p>
           <ul className="space-y-1 text-sm text-slate-600">
-            {categories.slice(0, 4).map((category) => (
+            {categories.map((category) => (
               <li key={category.id}>
                 <Link href={`/products?category=${category.slug}`}>{category.name}</Link>
               </li>

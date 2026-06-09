@@ -35,6 +35,7 @@ export const QuickViewModal = () => {
                   addLine({
                     productId: product.id,
                     variantId: v.id,
+                    categoryId: product.category.id,
                     name: product.name,
                     slug: product.slug,
                     image: product.images[0],

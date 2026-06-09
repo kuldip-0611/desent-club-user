@@ -1,4 +1,8 @@
-export type ProductCategory = string
+export type ProductCategoryRef = {
+  id: string
+  slug: string
+  name: string
+}
 export type ProductAudience = 'MEN' | 'WOMEN' | 'UNISEX'
 
 export type ProductVariant = {
@@ -14,7 +18,8 @@ export type Product = {
   slug: string
   name: string
   description: string
-  category: ProductCategory
+  category: ProductCategoryRef
+  subcategory: { slug: string; name: string } | null
   audience: ProductAudience
   price: number
   compareAtPrice?: number
@@ -30,7 +35,8 @@ export type Product = {
 
 export type ProductFilters = {
   search?: string
-  category?: ProductCategory | 'all'
+  category?: string | 'all'
+  subcategory?: string
   audience?: ProductAudience | 'all'
   minPrice?: number
   maxPrice?: number

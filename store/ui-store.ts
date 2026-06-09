@@ -8,9 +8,11 @@ type ModalName = 'auth' | 'quickView' | null
 type UiState = {
   modal: ModalName
   modalPayload?: Record<string, string>
+  authOnSuccess: (() => void) | null
   isCartDrawerOpen: boolean
   theme: 'light' | 'dark'
   openModal: (modal: Exclude<ModalName, null>, payload?: Record<string, string>) => void
+  openAuthModal: (onSuccess?: () => void) => void
   closeModal: () => void
   setCartDrawer: (open: boolean) => void
   toggleTheme: () => void
@@ -20,10 +22,16 @@ type UiState = {
 export const useUiStore = create<UiState>((set, get) => ({
   modal: null,
   modalPayload: undefined,
+  authOnSuccess: null,
   isCartDrawerOpen: false,
   theme: 'light',
   openModal: (modal, modalPayload) => set({ modal, modalPayload }),
-  closeModal: () => set({ modal: null, modalPayload: undefined }),
+  openAuthModal: (onSuccess) =>
+    set({
+      modal: 'auth',
+      authOnSuccess: onSuccess ?? null,
+    }),
+  closeModal: () => set({ modal: null, modalPayload: undefined, authOnSuccess: null }),
   setCartDrawer: (isCartDrawerOpen) => set({ isCartDrawerOpen }),
   toggleTheme: () => {
     const next = get().theme === 'dark' ? 'light' : 'dark'

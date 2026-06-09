@@ -11,11 +11,13 @@ import {
   useVerifyEmailOtpMutation,
 } from '@/src/hooks/useAuthMutations';
 import { useResendTimer } from '@/src/hooks/useResendTimer';
-import { clearOtpContext, getOtpContext, setAuthSession } from '@/src/utils/auth';
+import { clearOtpContext, getOtpContext } from '@/src/utils/auth';
+import { useAuthStore } from '@/store/auth-store';
 import { otpSchema } from '@/src/utils/validation';
 
 export default function VerifyOtpPage() {
   const router = useRouter();
+  const setAuthResponse = useAuthStore((s) => s.setAuthResponse);
   /** Avoid hydration mismatch: server and first client paint cannot read localStorage. */
   const [hasHydrated, setHasHydrated] = useState(false);
   const [otpContext, setOtpContext] = useState<ReturnType<typeof getOtpContext>>(null);
@@ -52,7 +54,7 @@ export default function VerifyOtpPage() {
     }
 
     try {
-      await resendEmailOtpMutation.mutateAsync({ email: ctx.value, name: ctx.name });
+      await resendEmailOtpMutation.mutateAsync({ email: ctx.email, name: ctx.name });
       restart();
       toast.success('OTP resent successfully');
     } catch (error) {
@@ -72,7 +74,7 @@ export default function VerifyOtpPage() {
   return (
     <AuthShell
       title="Verify your email"
-      subtitle={`Enter the 6-digit code sent to ${otpContext.value}`}
+      subtitle={`Enter the 6-digit code sent to ${otpContext.email}`}
     >
       <Formik
         initialValues={{ otp: '' }}
@@ -88,15 +90,15 @@ export default function VerifyOtpPage() {
 
           try {
             const response = await verifyEmailOtpMutation.mutateAsync({
-              email: ctx.value,
+              email: ctx.email,
               otp,
               name: ctx.name,
             });
 
-            setAuthSession(response.accessToken, response.user);
+            setAuthResponse(response);
             clearOtpContext();
             toast.success('Email verified successfully');
-            router.push('/dashboard');
+            router.push('/home');
           } catch (error) {
             const message = error instanceof Error ? error.message : 'OTP verification failed';
             toast.error(message);

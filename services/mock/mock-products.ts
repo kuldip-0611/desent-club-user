@@ -56,7 +56,12 @@ const buildProduct = (index: number): Product => {
       category === 'tshirts'
         ? 'Premium cotton-rich t-shirt with refined fit and breathable comfort.'
         : 'Performance tracks with flexible movement and premium everyday finish.',
-    category,
+    category: {
+      id: category === 'tshirts' ? 'mock-tshirts' : 'mock-tracks',
+      slug: category,
+      name: category === 'tshirts' ? 'Tshirts' : 'Tracks',
+    },
+    subcategory: null,
     audience: audienceCycle[index % audienceCycle.length],
     price: 999 + (index % 12) * 120,
     compareAtPrice: 1299 + (index % 12) * 130,

@@ -2,6 +2,7 @@ export type CartLine = {
   lineId: string
   productId: string
   variantId: string
+  categoryId?: string
   name: string
   slug: string
   image: string
