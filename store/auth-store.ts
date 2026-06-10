@@ -29,6 +29,10 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: response.refreshToken,
           user: response.user,
         })
+        // Sync wishlist after login (import lazily to avoid circular deps)
+        import('@/store/wishlist-store').then(({ useWishlistStore }) => {
+          useWishlistStore.getState().syncToServer().catch(() => undefined)
+        })
       },
       logout: async () => {
         try {

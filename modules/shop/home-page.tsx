@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ProductCard } from '@/modules/shop/components/product-card'
+import { RecentlyViewedSection } from '@/modules/shop/components/recently-viewed'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useShopHomeQuery } from '@/hooks/query/use-products-query'
 
@@ -110,6 +111,8 @@ export const HomePageModule = () => {
           ))}
         </div>
       </section>
+
+      <RecentlyViewedSection />
 
       <section className="grid gap-4 md:grid-cols-3">
         {['Fast shipping', 'Easy returns', 'Premium quality'].map((item) => (

@@ -59,6 +59,11 @@ export const listProducts = async (filters: ProductFilters = {}): Promise<Produc
       subcategory: subParam,
       audience: filters.audience && filters.audience !== 'all' ? filters.audience : undefined,
       sort: filters.sort || 'featured',
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      colors: filters.colors?.join(',') || undefined,
+      sizes: filters.sizes?.join(',') || undefined,
+      minRating: filters.minRating,
     },
   })
   return { ...data, items: data.items.map(normalizeProduct) }

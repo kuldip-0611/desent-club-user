@@ -13,14 +13,16 @@ export type CreateOrderPayload = {
   addressId?: string
   couponCode?: string
   notes?: string
+  paymentMethod?: 'COD' | 'ONLINE'
 }
 
 export type CreateOrderResponse = {
   orderId: string
-  razorpayOrderId: string
+  paymentMethod: 'COD' | 'ONLINE'
+  razorpayOrderId?: string
   amount: number
   currency: string
-  keyId: string
+  keyId?: string
 }
 
 export type VerifyPaymentPayload = {
@@ -72,6 +74,9 @@ export type OrderReturnRequest = {
   id: string
   status: string
   reason: string
+  type?: 'RETURN' | 'EXCHANGE'
+  exchangeSize?: string | null
+  orderItemId?: string | null
   adminNote: string | null
   createdAt: string
 }
@@ -107,11 +112,22 @@ export type UserOrder = {
   cancelledAt?: string | null
   cancelReason?: string | null
   shippingAddress?: ShippingAddress | null
+  awbCode?: string | null
+  courierName?: string | null
+  trackingUrl?: string | null
   items: OrderItem[]
   payment: { status: string; razorpayPaymentId: string | null } | null
   returnRequests?: OrderReturnRequest[]
   reviews?: OrderReview[]
   actions?: OrderActions
+}
+
+export type OrderTracking = {
+  status: string
+  awbCode: string | null
+  courierName: string | null
+  trackingUrl: string | null
+  shiprocketTracking: Record<string, unknown> | null
 }
 
 export type UserOrdersResponse = {
@@ -143,8 +159,36 @@ export const cancelOrder = async (orderId: string, reason?: string): Promise<{ m
   return data
 }
 
-export const requestReturn = async (orderId: string, reason: string): Promise<{ message: string }> => {
-  const { data } = await apiClient.post<{ message: string }>(`/orders/my/${orderId}/return`, { reason })
+export type ReturnRequestPayload = {
+  reason: string
+  type?: 'RETURN' | 'EXCHANGE'
+  orderItemId?: string
+  exchangeSize?: string
+}
+
+export const requestReturn = async (
+  orderId: string,
+  payload: ReturnRequestPayload,
+): Promise<{ message: string; returnId: string }> => {
+  const { data } = await apiClient.post<{ message: string; returnId: string }>(
+    `/orders/my/${orderId}/return`,
+    payload,
+  )
+  return data
+}
+
+export type ItemSizesResponse = {
+  currentSize: string
+  availableSizes: { size: string; quantity: number }[]
+}
+
+export const getOrderItemSizes = async (orderId: string, itemId: string): Promise<ItemSizesResponse> => {
+  const { data } = await apiClient.get<ItemSizesResponse>(`/orders/my/${orderId}/items/${itemId}/sizes`)
+  return data
+}
+
+export const getOrderTracking = async (orderId: string): Promise<OrderTracking> => {
+  const { data } = await apiClient.get<OrderTracking>(`/orders/my/${orderId}/track`)
   return data
 }
 

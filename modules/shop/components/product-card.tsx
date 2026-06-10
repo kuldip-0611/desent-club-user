@@ -25,6 +25,11 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     .filter((line) => line.productId === product.id)
     .reduce((sum, line) => sum + line.quantity, 0)
 
+  // Stock status
+  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0)
+  const isOutOfStock = totalStock === 0
+  const isLowStock = !isOutOfStock && totalStock <= 5
+
   return (
     <motion.article
       whileHover={{ y: -4 }}
@@ -38,6 +43,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
         />
+        {isOutOfStock ? (
+          <span className="absolute left-2 top-2 rounded-full bg-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+            Out of stock
+          </span>
+        ) : isLowStock ? (
+          <span className="absolute left-2 top-2 rounded-full bg-orange-500/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+            Only {totalStock} left
+          </span>
+        ) : null}
       </Link>
       <div className="space-y-2 p-4">
         <div className="flex flex-wrap gap-1">
@@ -77,7 +91,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <Button
             size="sm"
             className="flex-1"
+            disabled={isOutOfStock}
             onClick={() => {
+              if (isOutOfStock) return
               addLine({
                 productId: product.id,
                 variantId: firstVariant.id,
@@ -94,7 +110,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             }}
           >
             <ShoppingBag className="mr-1 h-3.5 w-3.5" />
-            Add +1
+            {isOutOfStock ? 'Sold out' : 'Add +1'}
           </Button>
           <Link href={`/products/${product.slug}`} className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium">
             View

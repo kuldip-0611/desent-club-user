@@ -1,17 +1,25 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { X, ChevronLeft, ChevronRight, ZoomIn, Ruler, Share2, MessageCircle, Link2, Check } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
 import { Button } from '@/components/ui/button'
 import { useProductQuery, useRelatedProductsQuery } from '@/hooks/query/use-products-query'
 import { getProductReviews, type ProductReview } from '@/services/product.service'
 import { useCartStore } from '@/store/cart-store'
+import { apiClient } from '@/services/api/client'
 import type { ProductVariant } from '@/types/product'
+import { useRecentlyViewed } from '@/hooks/use-recently-viewed'
 
 type ProductDetailPageProps = {
   slug: string
+}
+
+type SizeChartData = {
+  attributes: { slug: string; label: string; unit?: string | null }[]
+  rows: { size: string; values: Record<string, string> }[]
 }
 
 const formatReviewDate = (value: string) =>
@@ -28,12 +36,30 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   const addLine = useCartStore((s) => s.addLine)
   const { data: product, isLoading } = useProductQuery(slug)
   const { data: related } = useRelatedProductsQuery(product?.slug)
+  const { addViewed } = useRecentlyViewed()
 
   const [activeImage, setActiveImage] = useState(0)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [reviews, setReviews] = useState<ProductReview[]>([])
   const [reviewStats, setReviewStats] = useState({ averageRating: 0, reviewsCount: 0 })
   const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
+  const [sizeChart, setSizeChart] = useState<SizeChartData | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  const handleShare = async (platform: 'whatsapp' | 'copy') => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    const text = `Check out ${product?.name ?? 'this product'} on Desent Club! ${url}`
+    if (platform === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+    } else {
+      await navigator.clipboard.writeText(url)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    }
+  }
 
   const variant = useMemo(() => selectedVariant ?? product?.variants[0] ?? null, [selectedVariant, product?.variants])
   const displayImages = useMemo(() => {
@@ -42,6 +68,15 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
     const key = variant.colorName.toLowerCase()
     return product.imagesByColor?.[key] ?? product.images
   }, [product, variant])
+
+  const totalStock = useMemo(() => {
+    if (!product) return 0
+    return product.variants.reduce((sum, v) => sum + v.stock, 0)
+  }, [product])
+
+  const variantStock = variant?.stock ?? 0
+  const isOutOfStock = variant ? variantStock === 0 : totalStock === 0
+  const isLowStock = !isOutOfStock && variantStock > 0 && variantStock <= 5
 
   const ratingBreakdown = useMemo(() => {
     const counts = [0, 0, 0, 0, 0, 0]
@@ -74,6 +109,40 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
       .finally(() => setReviewsLoading(false))
   }, [slug])
 
+  // Track recently viewed
+  useEffect(() => {
+    if (product) addViewed(product.slug)
+  }, [product, addViewed])
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i + 1) % displayImages.length)
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i - 1 + displayImages.length) % displayImages.length)
+      if (e.key === 'Escape') setLightboxOpen(false)
+    }
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
+  }, [lightboxOpen, displayImages.length])
+
+  const openLightbox = useCallback((index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }, [])
+
+  const openSizeGuide = useCallback(async () => {
+    setSizeGuideOpen(true)
+    if (!sizeChart && product) {
+      try {
+        const { data } = await apiClient.get<SizeChartData>(`/shop/products/${product.slug}/size-chart`)
+        setSizeChart(data)
+      } catch {
+        setSizeChart({ attributes: [], rows: [] })
+      }
+    }
+  }, [sizeChart, product])
+
   if (isLoading || !product) {
     return <div className="mx-auto max-w-7xl px-4 py-10 text-sm text-slate-500">Loading product...</div>
   }
@@ -83,9 +152,40 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   return (
     <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6">
       <section className="grid gap-8 lg:grid-cols-2">
+        {/* ── Image gallery ── */}
         <div className="space-y-3">
           <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-slate-200 bg-white">
-            <Image src={displayImages[activeImage] ?? displayImages[0]} alt={product.name} fill className="object-cover transition duration-300 hover:scale-105" />
+            <Image
+              src={displayImages[activeImage] ?? displayImages[0]}
+              alt={product.name}
+              fill
+              className="object-cover transition duration-300"
+            />
+            {/* Zoom icon */}
+            <button
+              onClick={() => openLightbox(activeImage)}
+              className="absolute right-3 top-3 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white"
+              aria-label="Zoom image"
+            >
+              <ZoomIn className="h-4 w-4 text-slate-700" />
+            </button>
+            {/* Prev / Next arrows */}
+            {displayImages.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveImage((i) => (i - 1 + displayImages.length) % displayImages.length)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setActiveImage((i) => (i + 1) % displayImages.length)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
           <div className="grid grid-cols-4 gap-2">
             {displayImages.map((img, idx) => (
@@ -99,11 +199,11 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
             ))}
           </div>
         </div>
+
+        {/* ── Product info ── */}
         <div className="space-y-4">
           <nav className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-            <Link href="/products" className="hover:text-indigo-600">
-              Products
-            </Link>
+            <Link href="/products" className="hover:text-indigo-600">Products</Link>
             <span>/</span>
             <Link href={`/products?category=${product.category.slug}`} className="hover:text-indigo-600">
               {product.category.name}
@@ -120,7 +220,9 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
               </>
             ) : null}
           </nav>
+
           <h1 className="text-3xl font-black">{product.name}</h1>
+
           {hasReviews ? (
             <p className="text-sm text-amber-600">
               ★ {reviewStats.averageRating} · {reviewStats.reviewsCount} review{reviewStats.reviewsCount === 1 ? '' : 's'}
@@ -128,35 +230,77 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
           ) : (
             <p className="text-sm text-slate-500">No reviews yet</p>
           )}
+
           <p className="text-sm text-slate-600">{product.description}</p>
+
           <div className="flex items-center gap-3">
             <span className="text-2xl font-bold">Rs. {product.price}</span>
             {product.compareAtPrice ? <span className="text-sm text-slate-400 line-through">Rs. {product.compareAtPrice}</span> : null}
+            {product.compareAtPrice ? (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+                {Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}% off
+              </span>
+            ) : null}
           </div>
 
+          {/* Stock badge */}
+          {isOutOfStock ? (
+            <p className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              Out of stock
+            </p>
+          ) : isLowStock ? (
+            <p className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+              🔥 Only {variantStock} left!
+            </p>
+          ) : (
+            <p className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              ✓ In stock
+            </p>
+          )}
+
+          {/* Variant selector */}
           <div>
-            <p className="mb-2 text-sm font-semibold">Select variant</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold">Select variant</p>
+              <button
+                onClick={() => void openSizeGuide()}
+                className="flex items-center gap-1 text-xs text-indigo-600 hover:underline"
+              >
+                <Ruler className="h-3.5 w-3.5" />
+                Size guide
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {product.variants.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedVariant(item)}
-                  className={`rounded-xl border px-3 py-2 text-xs ${
-                    variant?.id === item.id ? 'border-indigo-600 bg-indigo-50' : 'border-slate-300'
-                  }`}
-                >
-                  {item.size} · {item.colorName}
-                </button>
-              ))}
+              {product.variants.map((item) => {
+                const oos = item.stock === 0
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedVariant(item)}
+                    disabled={oos}
+                    className={`relative rounded-xl border px-3 py-2 text-xs transition ${
+                      variant?.id === item.id
+                        ? 'border-indigo-600 bg-indigo-50 font-semibold text-indigo-800'
+                        : oos
+                          ? 'border-slate-200 bg-slate-50 text-slate-400 line-through'
+                          : 'border-slate-300 hover:border-slate-400'
+                    }`}
+                  >
+                    {item.size} · {item.colorName}
+                    {oos && (
+                      <span className="absolute -right-1 -top-1 rounded-full bg-slate-400 px-1 py-0 text-[8px] font-bold text-white">OOS</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          <p className="text-sm text-slate-500">Stock: {variant?.stock ?? 0} units</p>
-
           <div className="grid gap-2 sm:grid-cols-2">
             <Button
+              disabled={isOutOfStock || !variant}
               onClick={() => {
-                if (!variant) return
+                if (!variant || isOutOfStock) return
                 addLine({
                   productId: product.id,
                   variantId: variant.id,
@@ -171,13 +315,137 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                 })
               }}
             >
-              Add to cart
+              {isOutOfStock ? 'Out of Stock' : 'Add to cart'}
             </Button>
-            <Button variant="outline">Buy now</Button>
+            <Button variant="outline" disabled={isOutOfStock}>
+              {isOutOfStock ? 'Sold Out' : 'Buy now'}
+            </Button>
+          </div>
+
+          {/* ── Share buttons ── */}
+          <div className="flex items-center gap-2 pt-2">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+              <Share2 className="h-3.5 w-3.5" /> Share
+            </span>
+            <button
+              type="button"
+              onClick={() => void handleShare('whatsapp')}
+              className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleShare('copy')}
+              className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+            >
+              {linkCopied ? (
+                <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied!</>
+              ) : (
+                <><Link2 className="h-3.5 w-3.5" /> Copy link</>
+              )}
+            </button>
           </div>
         </div>
       </section>
 
+      {/* ── Lightbox modal ── */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative max-h-[90vh] max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl">
+              <Image src={displayImages[lightboxIndex]} alt={product.name} fill className="object-contain" />
+            </div>
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute -right-3 -top-3 rounded-full bg-white p-1.5 shadow-lg"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            {displayImages.length > 1 && (
+              <>
+                <button
+                  onClick={() => setLightboxIndex((i) => (i - 1 + displayImages.length) % displayImages.length)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setLightboxIndex((i) => (i + 1) % displayImages.length)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
+            <div className="mt-3 flex justify-center gap-1.5">
+              {displayImages.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setLightboxIndex(i)}
+                  className={`h-1.5 rounded-full transition-all ${i === lightboxIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/40'}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Size Guide modal ── */}
+      {sizeGuideOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSizeGuideOpen(false)}>
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setSizeGuideOpen(false)} className="absolute right-4 top-4 rounded-full p-1.5 hover:bg-slate-100">
+              <X className="h-4 w-4" />
+            </button>
+            <h2 className="text-xl font-bold">Size Guide</h2>
+            <p className="mt-1 text-sm text-slate-500">All measurements in cm. For the best fit, compare your body measurements.</p>
+
+            {!sizeChart ? (
+              <p className="mt-6 text-sm text-slate-400">Loading size chart…</p>
+            ) : sizeChart.rows.length === 0 ? (
+              <p className="mt-6 text-sm text-slate-500">No size chart available for this product.</p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Size</th>
+                      {sizeChart.attributes.map((attr) => (
+                        <th key={attr.slug} className="px-4 py-3 text-left font-semibold text-slate-700">
+                          {attr.label}{attr.unit ? ` (${attr.unit})` : ''}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizeChart.rows.map((row, i) => (
+                      <tr key={row.size} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                        <td className="px-4 py-3 font-semibold text-slate-900">{row.size}</td>
+                        {sizeChart.attributes.map((attr) => (
+                          <td key={attr.slug} className="px-4 py-3 text-slate-600">
+                            {row.values[attr.slug] ?? '—'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-5 rounded-xl bg-indigo-50 p-4 text-sm text-indigo-800">
+              <strong>How to measure:</strong> Use a soft measuring tape. Keep it snug but not tight. Chest = fullest part of chest. Waist = narrowest point of torso.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reviews ── */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <h2 className="text-xl font-bold">Customer reviews</h2>
 
@@ -203,7 +471,6 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                 ))}
               </div>
             </div>
-
             <ul className="space-y-4">
               {reviews.map((review) => (
                 <li key={review.id} className="rounded-xl border border-slate-100 p-4">
@@ -212,13 +479,9 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                       <p className="text-sm font-semibold text-slate-900">{review.user.name}</p>
                       <p className="text-xs text-slate-500">{formatReviewDate(review.createdAt)}</p>
                     </div>
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                      Verified purchase
-                    </span>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Verified purchase</span>
                   </div>
-                  <div className="mt-2">
-                    <StarRow rating={review.rating} />
-                  </div>
+                  <div className="mt-2"><StarRow rating={review.rating} /></div>
                   {review.comment ? (
                     <p className="mt-2 text-sm leading-relaxed text-slate-700">{review.comment}</p>
                   ) : (
@@ -231,13 +494,12 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
         ) : (
           <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
             <p className="font-medium text-slate-700">No reviews yet</p>
-            <p className="mt-1 text-sm text-slate-500">
-              Purchase this product and share your experience after delivery.
-            </p>
+            <p className="mt-1 text-sm text-slate-500">Purchase this product and share your experience after delivery.</p>
           </div>
         )}
       </section>
 
+      {/* ── Related products ── */}
       <section>
         <h2 className="mb-4 text-xl font-bold">Related products</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
