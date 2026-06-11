@@ -2,8 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Heart, ShoppingBag } from 'lucide-react'
+import { Heart, ShoppingBag, GitCompareArrows } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,11 +12,42 @@ import { useCartStore } from '@/store/cart-store'
 import { useWishlistStore } from '@/store/wishlist-store'
 import type { Product } from '@/types/product'
 
+function addToCompare(productId: string, router: ReturnType<typeof useRouter>) {
+  const stored = sessionStorage.getItem('compare_ids') ?? ''
+  const ids = stored.split(',').filter(Boolean)
+  if (ids.includes(productId)) {
+    router.push(`/compare?ids=${ids.join(',')}`)
+    return
+  }
+  if (ids.length >= 3) {
+    toast.error('You can compare up to 3 products')
+    return
+  }
+  ids.push(productId)
+  sessionStorage.setItem('compare_ids', ids.join(','))
+  if (ids.length >= 2) {
+    toast((t) => (
+      <span>
+        ⚖️ Ready to compare!{' '}
+        <button
+          className="underline font-semibold"
+          onClick={() => { toast.dismiss(t.id); router.push(`/compare?ids=${ids.join(',')}`) }}
+        >
+          View now
+        </button>
+      </span>
+    ))
+  } else {
+    toast.success('⚖️ Added to compare. Pick one more product.')
+  }
+}
+
 type ProductCardProps = {
   product: Product
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
+  const router = useRouter()
   const addLine = useCartStore((s) => s.addLine)
   const lines = useCartStore((s) => s.lines)
   const toggleWishlist = useWishlistStore((s) => s.toggle)
@@ -115,6 +147,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <Link href={`/products/${product.slug}`} className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium">
             View
           </Link>
+          <button
+            onClick={() => addToCompare(product.id, router)}
+            className="rounded-full border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100"
+            aria-label="Compare"
+            title="Add to compare"
+          >
+            <GitCompareArrows className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </motion.article>

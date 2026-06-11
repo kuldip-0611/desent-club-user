@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/auth-store'
 import { apiClient } from '@/services/api/client'
 import type { ProductVariant } from '@/types/product'
 import { useRecentlyViewed } from '@/hooks/use-recently-viewed'
+import { FlashSaleCountdown } from '@/components/ui/flash-sale-countdown'
 import { toast } from 'react-hot-toast'
 
 type ProductDetailPageProps = {
@@ -43,6 +44,8 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   const { addViewed } = useRecentlyViewed()
 
   const [activeImage, setActiveImage] = useState(0)
+  const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [reviews, setReviews] = useState<ProductReview[]>([])
   const [reviewStats, setReviewStats] = useState({ averageRating: 0, reviewsCount: 0 })
@@ -69,6 +72,53 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
       setTimeout(() => setLinkCopied(false), 2000)
     }
   }
+
+  // ── Two-step variant selection: Size → Color ──────────────────────────────
+  // All unique sizes (preserving order from variants)
+  const availableSizes = useMemo(() => {
+    if (!product) return []
+    return [...new Map(product.variants.map((v) => [v.size, v])).keys()]
+  }, [product])
+
+  // Colors available for the selected size (only in-stock or show all with OOS state)
+  const colorsForSize = useMemo(() => {
+    if (!product || !selectedSize) return []
+    const seen = new Map<string, ProductVariant>()
+    for (const v of product.variants) {
+      if (v.size === selectedSize && !seen.has(v.colorName)) {
+        seen.set(v.colorName, v)
+      }
+    }
+    return [...seen.values()]
+  }, [product, selectedSize])
+
+  // Auto-select first size on product load
+  useEffect(() => {
+    if (product && availableSizes.length && !selectedSize) {
+      setSelectedSize(availableSizes[0])
+    }
+  }, [product, availableSizes, selectedSize])
+
+  // When size changes, reset color and pick first available color
+  useEffect(() => {
+    if (!selectedSize || !product) return
+    const colors = product.variants.filter((v) => v.size === selectedSize)
+    const firstInStock = colors.find((v) => v.stock > 0) ?? colors[0]
+    if (firstInStock) {
+      setSelectedColor(firstInStock.colorName)
+      setSelectedVariant(firstInStock)
+    } else {
+      setSelectedColor(null)
+      setSelectedVariant(null)
+    }
+  }, [selectedSize, product])
+
+  // When color changes, find matching variant
+  useEffect(() => {
+    if (!selectedSize || !selectedColor || !product) return
+    const match = product.variants.find((v) => v.size === selectedSize && v.colorName === selectedColor)
+    setSelectedVariant(match ?? null)
+  }, [selectedSize, selectedColor, product])
 
   const variant = useMemo(() => selectedVariant ?? product?.variants[0] ?? null, [selectedVariant, product?.variants])
   const displayImages = useMemo(() => {
@@ -274,14 +324,30 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
           <p className="text-sm text-slate-600">{product.description}</p>
 
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold">Rs. {product.price}</span>
-            {product.compareAtPrice ? <span className="text-sm text-slate-400 line-through">Rs. {product.compareAtPrice}</span> : null}
-            {product.compareAtPrice ? (
+            <span className="text-2xl font-bold">
+              Rs. {product.flashSale ? product.flashSale.salePrice : product.price}
+            </span>
+            {(product.flashSale || product.compareAtPrice) ? (
+              <span className="text-sm text-slate-400 line-through">
+                Rs. {product.flashSale ? product.price : product.compareAtPrice}
+              </span>
+            ) : null}
+            {product.compareAtPrice && !product.flashSale ? (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
                 {Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}% off
               </span>
             ) : null}
           </div>
+
+          {/* Flash sale countdown */}
+          {product.flashSale && new Date(product.flashSale.endsAt) > new Date() && (
+            <FlashSaleCountdown
+              endsAt={product.flashSale.endsAt}
+              salePrice={product.flashSale.salePrice}
+              originalPrice={product.price}
+              label={product.flashSale.label ?? 'Flash Sale'}
+            />
+          )}
 
           {/* Stock badge */}
           {isOutOfStock ? (
@@ -298,42 +364,85 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
             </p>
           )}
 
-          {/* Variant selector */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold">Select variant</p>
-              <button
-                onClick={() => void openSizeGuide()}
-                className="flex items-center gap-1 text-xs text-indigo-600 hover:underline"
-              >
-                <Ruler className="h-3.5 w-3.5" />
-                Size guide
-              </button>
+          {/* Variant selector — Step 1: Size, Step 2: Color */}
+          <div className="space-y-4">
+            {/* ── Step 1: Size ── */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold">
+                  Size
+                  {selectedSize && <span className="ml-1.5 font-normal text-slate-500">— {selectedSize}</span>}
+                </p>
+                <button
+                  onClick={() => void openSizeGuide()}
+                  className="flex items-center gap-1 text-xs text-indigo-600 hover:underline"
+                >
+                  <Ruler className="h-3.5 w-3.5" />
+                  Size guide
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableSizes.map((size) => {
+                  const allOos = product.variants.filter((v) => v.size === size).every((v) => v.stock === 0)
+                  const isSelected = selectedSize === size
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      disabled={allOos}
+                      className={`relative min-w-[3rem] rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                        isSelected
+                          ? 'border-black bg-black text-white shadow-sm'
+                          : allOos
+                            ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300 line-through'
+                            : 'border-slate-300 text-slate-800 hover:border-slate-500'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {product.variants.map((item) => {
-                const oos = item.stock === 0
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedVariant(item)}
-                    disabled={oos}
-                    className={`relative rounded-xl border px-3 py-2 text-xs transition ${
-                      variant?.id === item.id
-                        ? 'border-indigo-600 bg-indigo-50 font-semibold text-indigo-800'
-                        : oos
-                          ? 'border-slate-200 bg-slate-50 text-slate-400 line-through'
-                          : 'border-slate-300 hover:border-slate-400'
-                    }`}
-                  >
-                    {item.size} · {item.colorName}
-                    {oos && (
-                      <span className="absolute -right-1 -top-1 rounded-full bg-slate-400 px-1 py-0 text-[8px] font-bold text-white">OOS</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+
+            {/* ── Step 2: Color (only shown after size is picked) ── */}
+            {selectedSize && colorsForSize.length > 0 && (
+              <div>
+                <p className="mb-2 text-sm font-semibold">
+                  Color
+                  {selectedColor && <span className="ml-1.5 font-normal text-slate-500">— {selectedColor}</span>}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {colorsForSize.map((item) => {
+                    const oos = item.stock === 0
+                    const isSelected = selectedColor === item.colorName
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => !oos && setSelectedColor(item.colorName)}
+                        disabled={oos}
+                        title={item.colorName}
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition ${
+                          isSelected
+                            ? 'border-black bg-black text-white shadow-sm'
+                            : oos
+                              ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300 line-through'
+                              : 'border-slate-300 text-slate-700 hover:border-slate-500'
+                        }`}
+                      >
+                        {/* Color swatch dot */}
+                        <span
+                          className="inline-block h-3 w-3 flex-shrink-0 rounded-full border border-white/40 shadow-sm"
+                          style={{ background: item.colorHex ?? '#ccc' }}
+                        />
+                        {item.colorName}
+                        {oos && <span className="text-[9px] font-bold text-slate-400">OOS</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Bundle Banner ── */}

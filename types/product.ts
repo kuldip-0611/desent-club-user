@@ -31,6 +31,11 @@ export type Product = {
   variants: ProductVariant[]
   isNewArrival?: boolean
   isBestSeller?: boolean
+  flashSale?: {
+    salePrice: number
+    endsAt: string
+    label?: string
+  } | null
 }
 
 export type ProductFilters = {

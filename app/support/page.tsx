@@ -21,7 +21,7 @@ const faqs = [
   },
   {
     q: 'Can I return or exchange my order?',
-    a: 'Yes! You can raise a return or size exchange request within 7 days of delivery directly from your order detail page. We will schedule a reverse pickup from your doorstep.',
+    a: 'Yes! You can raise a return or size exchange request within 3 days of delivery directly from your order detail page. We will schedule a reverse pickup from your doorstep.',
   },
   {
     q: 'When will I get my refund?',

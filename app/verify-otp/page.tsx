@@ -13,6 +13,7 @@ import {
 import { useResendTimer } from '@/src/hooks/useResendTimer';
 import { clearOtpContext, getOtpContext } from '@/src/utils/auth';
 import { useAuthStore } from '@/store/auth-store';
+import { applyReferralCode } from '@/services/referral.service';
 import { otpSchema } from '@/src/utils/validation';
 
 export default function VerifyOtpPage() {
@@ -98,6 +99,14 @@ export default function VerifyOtpPage() {
             setAuthResponse(response);
             clearOtpContext();
             toast.success('Email verified successfully');
+
+            // Auto-apply referral code if user came via referral link
+            const pendingRef = sessionStorage.getItem('pending_referral');
+            if (pendingRef && ctx.action === 'register') {
+              applyReferralCode(pendingRef).catch(() => undefined);
+              sessionStorage.removeItem('pending_referral');
+            }
+
             router.push('/home');
           } catch (error) {
             const message = error instanceof Error ? error.message : 'OTP verification failed';

@@ -52,7 +52,34 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <Link
+            href="/loyalty"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            🏆 Loyalty Points
+          </Link>
+          <Link
+            href="/referral"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            👥 Refer & Earn
+          </Link>
+          <Link
+            href="/orders"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            📦 My Orders
+          </Link>
+          <Link
+            href="/wishlist"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            ❤️ Wishlist
+          </Link>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Link
             href="/home"
             className="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
