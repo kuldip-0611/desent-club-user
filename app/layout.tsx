@@ -21,6 +21,13 @@ export const metadata: Metadata = {
     shortcut: '/logo.png',
     apple: '/logo.png',
   },
+  manifest: '/manifest.json',
+  alternates: { canonical: 'https://desentclub.com' },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Desent Club',
+  },
 };
 
 export default function RootLayout({

@@ -9,6 +9,7 @@ import { AddressesPanel } from '@/modules/shop/components/addresses-panel'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { openRazorpayCheckout } from '@/lib/razorpay'
 import { createOrder, verifyPayment } from '@/services/order.service'
+import { getStoredAffiliateCode } from '@/hooks/use-utm'
 import { getCartSummary, useCartStore } from '@/store/cart-store'
 import { useCheckoutAddressStore } from '@/store/checkout-address-store'
 import { useAuthStore } from '@/store/auth-store'
@@ -50,6 +51,7 @@ export const CheckoutPageModule = () => {
         addressId: selectedAddressId,
         couponCode: couponCode ?? undefined,
         paymentMethod,
+        affiliateCode: getStoredAffiliateCode() ?? undefined,
       })
 
       if (paymentMethod === 'COD') {

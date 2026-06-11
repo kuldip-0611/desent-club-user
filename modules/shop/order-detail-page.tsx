@@ -17,11 +17,13 @@ import {
 } from '@/lib/order-status'
 import {
   cancelOrder,
+  downloadInvoice,
   getMyOrder,
   getOrderItemSizes,
   getOrderTracking,
   requestReturn,
   submitOrderReviews,
+  submitNpsSurvey,
   type ItemSizesResponse,
   type OrderItem,
   type OrderTracking,
@@ -68,6 +70,11 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
   const [submitting, setSubmitting] = useState(false)
   const [tracking, setTracking] = useState<OrderTracking | null>(null)
   const [trackingLoading, setTrackingLoading] = useState(false)
+  const [npsScore, setNpsScore] = useState<number | null>(null)
+  const [npsComment, setNpsComment] = useState('')
+  const [npsSubmitting, setNpsSubmitting] = useState(false)
+  const [invoiceLoading, setInvoiceLoading] = useState(false)
+  const [npsSubmitted, setNpsSubmitted] = useState(false)
 
   const loadOrder = useCallback(async () => {
     setLoading(true)
@@ -225,6 +232,19 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       toast.error(error instanceof Error ? error.message : 'Could not submit reviews')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleNpsSubmit = async () => {
+    if (!order || npsScore === null) return
+    setNpsSubmitting(true)
+    try {
+      await submitNpsSurvey(order.id, npsScore, npsComment.trim() || undefined)
+      setNpsSubmitted(true)
+    } catch {
+      toast.error('Could not submit feedback. Please try again.')
+    } finally {
+      setNpsSubmitting(false)
     }
   }
 
@@ -566,17 +586,76 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
         </section>
       ) : null}
 
+      {/* ── NPS Survey (shown for DELIVERED orders) ── */}
+      {order.status === 'DELIVERED' && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          {npsSubmitted ? (
+            <p className="text-sm font-medium text-emerald-700">
+              Thank you for your feedback! It helps us improve.
+            </p>
+          ) : (
+            <>
+              <p className="font-semibold">How was your experience?</p>
+              <p className="mt-0.5 text-sm text-slate-500">Rate your overall satisfaction (0 = terrible, 10 = excellent)</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                  <button
+                    key={score}
+                    type="button"
+                    onClick={() => setNpsScore(score)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition ${
+                      npsScore === score
+                        ? score >= 9
+                          ? 'border-emerald-500 bg-emerald-500 text-white'
+                          : score >= 7
+                            ? 'border-indigo-500 bg-indigo-500 text-white'
+                            : 'border-red-500 bg-red-500 text-white'
+                        : 'border-slate-200 text-slate-700 hover:border-slate-400'
+                    }`}
+                  >
+                    {score}
+                  </button>
+                ))}
+              </div>
+              {npsScore !== null && (
+                <div className="mt-3 space-y-2">
+                  <textarea
+                    className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-indigo-400"
+                    rows={2}
+                    placeholder="Tell us more (optional)…"
+                    value={npsComment}
+                    onChange={(e) => setNpsComment(e.target.value)}
+                  />
+                  <Button disabled={npsSubmitting} onClick={() => void handleNpsSubmit()}>
+                    {npsSubmitting ? 'Submitting…' : 'Submit feedback'}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
       <section className="flex flex-wrap gap-3">
         {/* Invoice download */}
-        <a
-          href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/orders/my/${order.id}/invoice`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100"
+        <button
+          type="button"
+          disabled={invoiceLoading}
+          onClick={async () => {
+            setInvoiceLoading(true)
+            try {
+              await downloadInvoice(order.id)
+            } catch {
+              toast.error('Failed to download invoice. Please try again.')
+            } finally {
+              setInvoiceLoading(false)
+            }
+          }}
+          className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <FileDown className="h-4 w-4" />
-          Download Invoice
-        </a>
+          <FileDown className={`h-4 w-4 ${invoiceLoading ? 'animate-bounce' : ''}`} />
+          {invoiceLoading ? 'Downloading…' : 'Download Invoice'}
+        </button>
 
         {order.actions?.canCancel ? (
           showCancel ? (

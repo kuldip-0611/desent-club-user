@@ -14,6 +14,7 @@ export type CreateOrderPayload = {
   couponCode?: string
   notes?: string
   paymentMethod?: 'COD' | 'ONLINE'
+  affiliateCode?: string
 }
 
 export type CreateOrderResponse = {
@@ -202,4 +203,27 @@ export const submitOrderReviews = async (
 ): Promise<{ message: string }> => {
   const { data } = await apiClient.post<{ message: string }>(`/orders/my/${orderId}/reviews`, { reviews })
   return data
+}
+
+export const downloadInvoice = async (orderId: string): Promise<void> => {
+  const response = await apiClient.get(`/orders/my/${orderId}/invoice`, {
+    responseType: 'blob',
+  })
+  const blob = new Blob([response.data as BlobPart], { type: 'application/pdf' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `invoice-${orderId.slice(-8).toUpperCase()}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export const submitNpsSurvey = async (
+  orderId: string,
+  score: number,
+  comment?: string,
+): Promise<void> => {
+  await apiClient.post(`/orders/my/${orderId}/nps`, { score, comment })
 }

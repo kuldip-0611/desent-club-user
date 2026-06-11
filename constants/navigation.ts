@@ -10,4 +10,5 @@ export const MAIN_NAV = [
   { label: 'Products', href: '/products' },
   { label: 'Wishlist', href: '/wishlist' },
   { label: 'Orders', href: '/orders' },
+  { label: 'Support', href: '/support' },
 ]

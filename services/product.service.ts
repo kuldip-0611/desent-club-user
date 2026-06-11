@@ -136,6 +136,14 @@ export const searchProducts = async (q: string, limit = 8): Promise<SearchSugges
   }))
 }
 
+export const subscribeBackInStock = async (
+  productId: string,
+  email: string,
+  size?: string,
+): Promise<void> => {
+  await apiClient.post(`/products/${productId}/notify-me`, { email, size })
+}
+
 export const getShopHome = async (): Promise<ShopHomeResponse> => {
   const { data } = await apiClient.get<ShopHomeResponse>('/shop/home')
   return {

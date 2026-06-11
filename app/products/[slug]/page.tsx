@@ -59,8 +59,87 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
 
 export default async function ProductDetailRoute({ params }: ProductDetailRouteProps) {
   const { slug } = await params
+
+  // Fetch product for JSON-LD structured data
+  let jsonLd: Record<string, unknown> | null = null
+  let breadcrumbLd: Record<string, unknown> | null = null
+  try {
+    const res = await fetch(`${API_URL}/shop/products/${slug}`, { next: { revalidate: 3600 } })
+    if (res.ok) {
+      const product = await res.json() as {
+        id: string
+        name: string
+        description: string
+        price: number
+        images: string[]
+        isAvailable?: boolean
+        reviews?: { rating: number }[]
+      }
+
+      jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        image: product.images?.[0],
+        sku: product.id,
+        offers: {
+          '@type': 'Offer',
+          price: product.price,
+          priceCurrency: 'INR',
+          availability:
+            product.isAvailable !== false
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+          url: `https://desentclub.com/products/${slug}`,
+        },
+        ...(product.reviews && product.reviews.length > 0
+          ? {
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: (
+                  product.reviews.reduce((s: number, r: { rating: number }) => s + r.rating, 0) /
+                  product.reviews.length
+                ).toFixed(1),
+                reviewCount: product.reviews.length,
+              },
+            }
+          : {}),
+      }
+
+      breadcrumbLd = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://desentclub.com' },
+          { '@type': 'ListItem', position: 2, name: 'Products', item: 'https://desentclub.com/products' },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: product.name,
+            item: `https://desentclub.com/products/${slug}`,
+          },
+        ],
+      }
+    }
+  } catch {
+    // JSON-LD is best-effort; don't block rendering
+  }
+
   return (
     <StoreShell>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      {breadcrumbLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        />
+      )}
       <ProductDetailPageModule slug={slug} />
     </StoreShell>
   )

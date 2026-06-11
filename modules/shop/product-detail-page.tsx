@@ -7,11 +7,14 @@ import { X, ChevronLeft, ChevronRight, ZoomIn, Ruler, Share2, MessageCircle, Lin
 import { ProductCard } from '@/modules/shop/components/product-card'
 import { Button } from '@/components/ui/button'
 import { useProductQuery, useRelatedProductsQuery } from '@/hooks/query/use-products-query'
-import { getProductReviews, type ProductReview } from '@/services/product.service'
+import { getProductReviews, subscribeBackInStock, type ProductReview } from '@/services/product.service'
+import { getActiveBundles, type ActiveBundle } from '@/services/bundle.service'
 import { useCartStore } from '@/store/cart-store'
+import { useAuthStore } from '@/store/auth-store'
 import { apiClient } from '@/services/api/client'
 import type { ProductVariant } from '@/types/product'
 import { useRecentlyViewed } from '@/hooks/use-recently-viewed'
+import { toast } from 'react-hot-toast'
 
 type ProductDetailPageProps = {
   slug: string
@@ -34,6 +37,7 @@ const StarRow = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' }
 
 export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   const addLine = useCartStore((s) => s.addLine)
+  const user = useAuthStore((s) => s.user)
   const { data: product, isLoading } = useProductQuery(slug)
   const { data: related } = useRelatedProductsQuery(product?.slug)
   const { addViewed } = useRecentlyViewed()
@@ -48,6 +52,11 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
   const [sizeChart, setSizeChart] = useState<SizeChartData | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [activeBundle, setActiveBundle] = useState<ActiveBundle | null>(null)
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const [notifySize, setNotifySize] = useState('')
+  const [notifySubmitting, setNotifySubmitting] = useState(false)
+  const [notifySuccess, setNotifySuccess] = useState(false)
 
   const handleShare = async (platform: 'whatsapp' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
@@ -114,6 +123,23 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
     if (product) addViewed(product.slug)
   }, [product, addViewed])
 
+  // Pre-fill notify email from logged in user
+  useEffect(() => {
+    if (user?.email && !notifyEmail) {
+      setNotifyEmail(user.email)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email])
+
+  // Fetch active bundle for this product
+  useEffect(() => {
+    if (!product) return
+    getActiveBundles().then((bundles) => {
+      const match = bundles.find((b) => b.productIds.includes(product.id))
+      setActiveBundle(match ?? null)
+    })
+  }, [product])
+
   // Keyboard navigation for lightbox
   useEffect(() => {
     if (!lightboxOpen) return
@@ -142,6 +168,20 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
       }
     }
   }, [sizeChart, product])
+
+  const handleNotifyMe = async () => {
+    if (!product) return
+    if (!notifyEmail.trim()) { toast.error('Please enter your email'); return }
+    setNotifySubmitting(true)
+    try {
+      await subscribeBackInStock(product.id, notifyEmail.trim(), notifySize || undefined)
+      setNotifySuccess(true)
+    } catch {
+      toast.error('Could not subscribe. Please try again.')
+    } finally {
+      setNotifySubmitting(false)
+    }
+  }
 
   if (isLoading || !product) {
     return <div className="mx-auto max-w-7xl px-4 py-10 text-sm text-slate-500">Loading product...</div>
@@ -296,6 +336,21 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
             </div>
           </div>
 
+          {/* ── Bundle Banner ── */}
+          {activeBundle && (
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+              🎁{' '}
+              <strong>
+                Buy {activeBundle.minItems}+ items from this collection — get{' '}
+                {activeBundle.discountType === 'PERCENT'
+                  ? `${activeBundle.discountValue}% off`
+                  : `₹${activeBundle.discountValue} off`}{' '}
+                automatically at checkout
+              </strong>
+              {activeBundle.name ? ` · ${activeBundle.name}` : ''}
+            </div>
+          )}
+
           <div className="grid gap-2 sm:grid-cols-2">
             <Button
               disabled={isOutOfStock || !variant}
@@ -321,6 +376,52 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
               {isOutOfStock ? 'Sold Out' : 'Buy now'}
             </Button>
           </div>
+
+          {/* ── Notify Me When Available ── */}
+          {isOutOfStock && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              {notifySuccess ? (
+                <p className="text-sm font-medium text-emerald-700">
+                  ✅ We&apos;ll notify you when it&apos;s back in stock!
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-slate-800">Notify Me When Available</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Enter your email and we&apos;ll send you an alert when this item is restocked.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    <input
+                      type="email"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                      placeholder="your@email.com"
+                      value={notifyEmail}
+                      onChange={(e) => setNotifyEmail(e.target.value)}
+                    />
+                    {product.variants.length > 0 && (
+                      <select
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        value={notifySize}
+                        onChange={(e) => setNotifySize(e.target.value)}
+                      >
+                        <option value="">Any size (optional)</option>
+                        {Array.from(new Set(product.variants.map((v) => v.size))).map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    )}
+                    <Button
+                      className="w-full"
+                      disabled={notifySubmitting}
+                      onClick={() => void handleNotifyMe()}
+                    >
+                      {notifySubmitting ? 'Subscribing…' : 'Notify Me'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* ── Share buttons ── */}
           <div className="flex items-center gap-2 pt-2">
