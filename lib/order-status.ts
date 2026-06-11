@@ -19,11 +19,12 @@ export const ORDER_STATUS_COLOR: Record<string, string> = {
 }
 
 export const RETURN_STATUS_LABEL: Record<string, string> = {
-  REQUESTED: 'Return requested',
-  APPROVED: 'Return approved',
-  REJECTED: 'Return rejected',
-  RECEIVED: 'Item received',
+  REQUESTED: 'Return / exchange requested',
+  APPROVED: 'Approved — pickup scheduled',
+  REJECTED: 'Request rejected',
+  RECEIVED: 'Item received at warehouse',
   REFUNDED: 'Refund processed',
+  EXCHANGED: 'New size dispatched 🚚',
 }
 
 export const ORDER_TIMELINE = [

@@ -393,9 +393,17 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       ) : null}
 
       {latestReturn ? (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">
+        <div
+          className={`rounded-xl border p-4 text-sm ${
+            latestReturn.type === 'EXCHANGE'
+              ? 'border-indigo-100 bg-indigo-50 text-indigo-900'
+              : 'border-amber-100 bg-amber-50 text-amber-900'
+          }`}
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{RETURN_STATUS_LABEL[latestReturn.status] ?? latestReturn.status}</p>
+            <p className="font-semibold">
+              {RETURN_STATUS_LABEL[latestReturn.status] ?? latestReturn.status}
+            </p>
             {latestReturn.type === 'EXCHANGE' ? (
               <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
                 🔄 Size Exchange → {latestReturn.exchangeSize}
@@ -406,9 +414,46 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               </span>
             )}
           </div>
-          <p className="mt-1 text-amber-800">{latestReturn.reason}</p>
+          <p className="mt-1 opacity-80">{latestReturn.reason}</p>
+
+          {/* Pickup tracking */}
+          {latestReturn.returnAwbCode && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs">
+              <span className="opacity-60">Pickup AWB:</span>
+              <a
+                href={`https://shiprocket.co/tracking/${latestReturn.returnAwbCode}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono font-semibold underline underline-offset-2"
+              >
+                {latestReturn.returnAwbCode}
+              </a>
+              {latestReturn.returnCourierName && (
+                <span className="opacity-60">({latestReturn.returnCourierName})</span>
+              )}
+            </div>
+          )}
+
+          {/* Exchange dispatch tracking */}
+          {latestReturn.exchangeAwbCode && (
+            <div className="mt-1 flex items-center gap-1.5 text-xs">
+              <span className="opacity-60">New item AWB:</span>
+              <a
+                href={`https://shiprocket.co/tracking/${latestReturn.exchangeAwbCode}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono font-semibold text-indigo-700 underline underline-offset-2"
+              >
+                {latestReturn.exchangeAwbCode}
+              </a>
+              {latestReturn.exchangeCourierName && (
+                <span className="opacity-60">({latestReturn.exchangeCourierName})</span>
+              )}
+            </div>
+          )}
+
           {latestReturn.adminNote ? (
-            <p className="mt-2 text-xs text-amber-700">Admin note: {latestReturn.adminNote}</p>
+            <p className="mt-2 text-xs opacity-70">Admin note: {latestReturn.adminNote}</p>
           ) : null}
         </div>
       ) : null}

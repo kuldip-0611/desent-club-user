@@ -78,6 +78,10 @@ export type OrderReturnRequest = {
   exchangeSize?: string | null
   orderItemId?: string | null
   adminNote: string | null
+  returnAwbCode?: string | null
+  returnCourierName?: string | null
+  exchangeAwbCode?: string | null
+  exchangeCourierName?: string | null
   createdAt: string
 }
 
