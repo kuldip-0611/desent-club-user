@@ -61,7 +61,7 @@ export const openRazorpayCheckout = async ({
   amount,
   currency,
   razorpayOrderId,
-  name = 'Desent Club',
+  name = 'Disent Clung',
   description = 'Order payment',
   prefill,
   onSuccess,

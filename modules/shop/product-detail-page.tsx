@@ -63,7 +63,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
 
   const handleShare = async (platform: 'whatsapp' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
-    const text = `Check out ${product?.name ?? 'this product'} on Desent Club! ${url}`
+    const text = `Check out ${product?.name ?? 'this product'} on Disent Clung! ${url}`
     if (platform === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
     } else {

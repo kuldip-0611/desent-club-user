@@ -1,7 +1,7 @@
 const digitsOnly = (value: string) => value.replace(/\D/g, '')
 
 export const SUPPORT_EMAIL =
-  process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'support@desentclub.com'
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'support@disentclub.com'
 
 export const SUPPORT_PHONE =
   process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? '919313597171'
@@ -11,7 +11,7 @@ export const SUPPORT_PHONE_DISPLAY =
 
 export const SUPPORT_WHATSAPP_MESSAGE =
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_MESSAGE ??
-  'Hi, I need help with my Desent Club order.'
+  'Hi, I need help with my Disent Clung order.'
 
 export const supportMailtoHref = `mailto:${SUPPORT_EMAIL}`
 

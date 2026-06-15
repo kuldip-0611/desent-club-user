@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { AppProviders } from '@/src/components/providers/AppProviders';
+import { SITE_URL } from '@/constants/site';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Desent Club',
+  title: 'Disent Clung',
   description: 'Premium ecommerce clothing experience',
   icons: {
     icon: '/logo.png',
@@ -22,11 +23,11 @@ export const metadata: Metadata = {
     apple: '/logo.png',
   },
   manifest: '/manifest.json',
-  alternates: { canonical: 'https://desentclub.com' },
+  alternates: { canonical: SITE_URL },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Desent Club',
+    title: 'Disent Clung',
   },
 };
 

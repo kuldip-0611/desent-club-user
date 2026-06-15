@@ -1,12 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { Star } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { CartCouponsSection } from '@/modules/shop/components/cart-coupons-section'
 import { getCartSummary, useCartStore } from '@/store/cart-store'
 import { useUiStore } from '@/store/ui-store'
+import { useAuthStore } from '@/store/auth-store'
+import { getLoyaltyAccount } from '@/services/loyalty.service'
 
 export const CartDrawer = () => {
   const open = useUiStore((s) => s.isCartDrawerOpen)
@@ -16,6 +19,13 @@ export const CartDrawer = () => {
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const couponDiscount = useCartStore((s) => s.couponDiscount)
   const summary = useMemo(() => getCartSummary(lines, couponDiscount), [lines, couponDiscount])
+  const user = useAuthStore((s) => s.user)
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!user || !open) return
+    getLoyaltyAccount().then((a) => setLoyaltyBalance(a.balance)).catch(() => undefined)
+  }, [user, open])
 
   const itemCount = lines.reduce((a, r) => a + r.quantity, 0)
 
@@ -73,6 +83,19 @@ export const CartDrawer = () => {
 
         {lines.length > 0 ? (
           <div className="mt-4 shrink-0 space-y-3 border-t border-slate-200 pt-4">
+            {/* Loyalty points hint */}
+            {user && loyaltyBalance !== null && (
+              <div className="flex items-center gap-2 rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2">
+                <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
+                <p className="flex-1 text-xs text-yellow-800">
+                  {loyaltyBalance > 0
+                    ? <><strong>{loyaltyBalance.toLocaleString()} pts</strong> available — apply at checkout for a discount</>
+                    : <>Earn loyalty points on every order</>
+                  }
+                </p>
+              </div>
+            )}
+
             <CartCouponsSection compact />
 
             <div className="space-y-1 rounded-xl bg-slate-50 px-3 py-2 text-xs">

@@ -43,7 +43,7 @@ export default function SharedWishlistPage() {
     <section className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-bold text-slate-900">Shared Wishlist</h1>
-        <p className="mt-1 text-sm text-slate-500">Someone shared their Desent Club wishlist with you</p>
+        <p className="mt-1 text-sm text-slate-500">Someone shared their Disent Clung wishlist with you</p>
 
         {products.length === 0 ? (
           <div className="mt-10 text-center text-slate-400">No products found</div>

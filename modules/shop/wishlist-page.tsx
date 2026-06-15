@@ -22,8 +22,8 @@ export const WishlistPageModule = () => {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: 'My Desent Club Wishlist',
-          text: 'Check out my wishlist on Desent Club!',
+          title: 'My Disent Clung Wishlist',
+          text: 'Check out my wishlist on Disent Clung!',
           url: shareUrl,
         })
       } else {

@@ -39,6 +39,10 @@ const normalizeProduct = (product: Product): Product => ({
   imagesByColor: Object.fromEntries(
     Object.entries(product.imagesByColor ?? {}).map(([key, values]) => [key, values.map(mediaUrl)]),
   ),
+  materials: (product.productFabrics ?? []).map((pf) => ({
+    name: pf.fabric.name,
+    percent: pf.percent,
+  })),
 })
 
 export const listProducts = async (filters: ProductFilters = {}): Promise<ProductListResponse> => {

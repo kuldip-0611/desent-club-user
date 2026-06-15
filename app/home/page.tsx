@@ -3,7 +3,7 @@ import { StoreShell } from '@/modules/shop/components/store-shell'
 import { HomePageModule } from '@/modules/shop/home-page'
 
 export const metadata: Metadata = {
-  title: 'Desent Club | Premium Street & Sports Fashion',
+  title: 'Disent Clung | Premium Street & Sports Fashion',
   description: 'Modern ecommerce fashion store with premium fits and performance apparel.',
 }
 

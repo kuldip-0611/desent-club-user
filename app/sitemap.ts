@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
+import { SITE_URL } from '@/constants/site'
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/+$/, '')
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://desenclub.com').replace(/\/+$/, '')
 
 type SitemapData = {
   products: { slug: string; updatedAt: string }[]

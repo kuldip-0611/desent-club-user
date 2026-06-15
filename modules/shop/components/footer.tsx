@@ -21,8 +21,8 @@ export const Footer = () => {
           {/* Brand — spans 2 cols on lg */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2">
-              <Image src="/icon.png" alt="Desent Club logo" width={28} height={28} className="rounded-md" />
-              <p className="text-lg font-black tracking-tight">DESENTCLUB</p>
+              <Image src="/icon.png" alt="Disent Clung logo" width={28} height={28} className="rounded-md" />
+              <p className="text-lg font-black tracking-tight">DISENT CLUNG</p>
             </div>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-500">
               Premium fashion essentials inspired by global street and sport culture.
@@ -106,7 +106,7 @@ export const Footer = () => {
 
         {/* Bottom bar */}
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-6 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Desent Club. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Disent Clung. All rights reserved.</p>
           <div className="flex items-center gap-2">
             <Mail size={12} />
             <a href={supportMailtoHref} className="hover:text-indigo-500 transition-colors">

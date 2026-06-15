@@ -36,6 +36,10 @@ export type Product = {
     endsAt: string
     label?: string
   } | null
+  /** Fabric compositions e.g. [{name:"Cotton",percent:80},{name:"Polyester",percent:20}] */
+  materials?: { name: string; percent?: number }[]
+  /** Raw field from backend before normalisation */
+  productFabrics?: { fabric: { name: string }; percent: number }[]
 }
 
 export type ProductFilters = {

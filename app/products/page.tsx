@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { StoreShell } from '@/modules/shop/components/store-shell'
 import { ProductsPageModule } from '@/modules/shop/products-page'
+import { SITE_URL } from '@/constants/site'
 
 type ProductsRouteProps = {
   searchParams: Promise<{ category?: string; audience?: string; subcategory?: string; page?: string }>
@@ -11,11 +12,11 @@ export async function generateMetadata({ searchParams }: ProductsRouteProps): Pr
   const page = params.page ?? '1'
   const isFirstPage = page === '1'
   const canonical = isFirstPage
-    ? 'https://desentclub.com/products'
-    : `https://desentclub.com/products?page=${page}`
+    ? `${SITE_URL}/products`
+    : `${SITE_URL}/products?page=${page}`
 
   return {
-    title: 'Products | Desent Club',
+    title: 'Products | Disent Clung',
     description: 'Browse premium tshirts, tracks, and everyday fashion essentials.',
     alternates: { canonical },
     robots: isFirstPage

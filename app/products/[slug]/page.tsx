@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { StoreShell } from '@/modules/shop/components/store-shell'
 import { ProductDetailPageModule } from '@/modules/shop/product-detail-page'
+import { SITE_URL } from '@/constants/site'
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/+$/, '')
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://desenclub.com'
 
 type ProductDetailRouteProps = {
   params: Promise<{ slug: string }>
@@ -23,8 +23,8 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
         category: { name: string }
       }
 
-      const title = `${product.name} | Desent Club`
-      const description = product.description?.slice(0, 160) || `Buy ${product.name} at Desent Club — premium clothing delivered to your door.`
+      const title = `${product.name} | Disent Clung`
+      const description = product.description?.slice(0, 160) || `Buy ${product.name} at Disent Clung — premium clothing delivered to your door.`
       const image = product.images[0] ?? `${SITE_URL}/og-default.jpg`
 
       return {
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
           description,
           images: [image],
         },
-        keywords: [product.name, product.category.name, 'clothing', 'fashion', 'Desent Club'],
+        keywords: [product.name, product.category.name, 'clothing', 'fashion', 'Disent Clung'],
       }
     }
   } catch {
@@ -52,8 +52,8 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
 
   const humanName = slug.split('--')[0]?.replace(/-/g, ' ') ?? slug
   return {
-    title: `${humanName} | Desent Club`,
-    description: `Buy ${humanName} at Desent Club — premium clothing delivered to your door.`,
+    title: `${humanName} | Disent Clung`,
+    description: `Buy ${humanName} at Disent Clung — premium clothing delivered to your door.`,
   }
 }
 
@@ -91,7 +91,7 @@ export default async function ProductDetailRoute({ params }: ProductDetailRouteP
             product.isAvailable !== false
               ? 'https://schema.org/InStock'
               : 'https://schema.org/OutOfStock',
-          url: `https://desentclub.com/products/${slug}`,
+          url: `${SITE_URL}/products/${slug}`,
         },
         ...(product.reviews && product.reviews.length > 0
           ? {
@@ -111,13 +111,13 @@ export default async function ProductDetailRoute({ params }: ProductDetailRouteP
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://desentclub.com' },
-          { '@type': 'ListItem', position: 2, name: 'Products', item: 'https://desentclub.com/products' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+          { '@type': 'ListItem', position: 2, name: 'Products', item: `${SITE_URL}/products` },
           {
             '@type': 'ListItem',
             position: 3,
             name: product.name,
-            item: `https://desentclub.com/products/${slug}`,
+            item: `${SITE_URL}/products/${slug}`,
           },
         ],
       }

@@ -117,7 +117,7 @@ export const Navbar = () => {
             <Menu className="h-5 w-5" />
           </button>
           <Link href="/home" className="flex items-center gap-2">
-            <Image src="/icon.png" alt="Desent Club logo" width={26} height={26} className="rounded-md" />
+            <Image src="/icon.png" alt="Disent Clung logo" width={44} height={44} className="h-11 w-11 shrink-0 rounded-md" />
           </Link>
 
           <nav className="hidden items-center gap-6 lg:flex">

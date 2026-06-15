@@ -3,43 +3,23 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, ShoppingBag, GitCompareArrows } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/store/cart-store'
 import { useWishlistStore } from '@/store/wishlist-store'
 import type { Product } from '@/types/product'
 
-function addToCompare(productId: string, router: ReturnType<typeof useRouter>) {
-  const stored = sessionStorage.getItem('compare_ids') ?? ''
-  const ids = stored.split(',').filter(Boolean)
-  if (ids.includes(productId)) {
-    router.push(`/compare?ids=${ids.join(',')}`)
-    return
-  }
-  if (ids.length >= 3) {
-    toast.error('You can compare up to 3 products')
-    return
-  }
-  ids.push(productId)
+function getCompareIds(): string[] {
+  if (typeof window === 'undefined') return []
+  return (sessionStorage.getItem('compare_ids') ?? '').split(',').filter(Boolean)
+}
+
+function setCompareIds(ids: string[]) {
   sessionStorage.setItem('compare_ids', ids.join(','))
-  if (ids.length >= 2) {
-    toast((t) => (
-      <span>
-        ⚖️ Ready to compare!{' '}
-        <button
-          className="underline font-semibold"
-          onClick={() => { toast.dismiss(t.id); router.push(`/compare?ids=${ids.join(',')}`) }}
-        >
-          View now
-        </button>
-      </span>
-    ))
-  } else {
-    toast.success('⚖️ Added to compare. Pick one more product.')
-  }
+  window.dispatchEvent(new Event('compare-updated'))
 }
 
 type ProductCardProps = {
@@ -61,6 +41,45 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0)
   const isOutOfStock = totalStock === 0
   const isLowStock = !isOutOfStock && totalStock <= 5
+
+  // Compare state
+  const [inCompare, setInCompare] = useState(false)
+  useEffect(() => {
+    const sync = () => setInCompare(getCompareIds().includes(product.id))
+    sync()
+    window.addEventListener('compare-updated', sync)
+    return () => window.removeEventListener('compare-updated', sync)
+  }, [product.id])
+
+  const toggleCompare = () => {
+    const ids = getCompareIds()
+    if (ids.includes(product.id)) {
+      setCompareIds(ids.filter((i) => i !== product.id))
+      toast.success('Removed from compare')
+    } else {
+      if (ids.length >= 3) {
+        toast.error('You can compare up to 3 products')
+        return
+      }
+      const next = [...ids, product.id]
+      setCompareIds(next)
+      if (next.length >= 2) {
+        toast((t) => (
+          <span>
+            ⚖️ Ready to compare!{' '}
+            <button
+              className="underline font-semibold"
+              onClick={() => { toast.dismiss(t.id); router.push(`/compare?ids=${next.join(',')}`) }}
+            >
+              View now
+            </button>
+          </span>
+        ))
+      } else {
+        toast.success('Added to compare. Pick one more.')
+      }
+    }
+  }
 
   return (
     <motion.article
@@ -119,10 +138,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           {product.isNewArrival ? <Badge>New</Badge> : null}
           {inCartQty > 0 ? <Badge className="bg-emerald-100 text-emerald-700">In cart: {inCartQty}</Badge> : null}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="flex-1"
+        <div className="space-y-2 pt-1">
+          {/* Add to cart — full width */}
+          <button
             disabled={isOutOfStock}
             onClick={() => {
               if (isOutOfStock) return
@@ -140,21 +158,37 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               })
               toast.success(`${product.name} added to cart`)
             }}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
+              isOutOfStock
+                ? 'cursor-not-allowed bg-slate-100 text-slate-400'
+                : 'bg-black text-white hover:bg-slate-800 active:scale-95'
+            }`}
           >
-            <ShoppingBag className="mr-1 h-3.5 w-3.5" />
-            {isOutOfStock ? 'Sold out' : 'Add +1'}
-          </Button>
-          <Link href={`/products/${product.slug}`} className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium">
-            View
-          </Link>
-          <button
-            onClick={() => addToCompare(product.id, router)}
-            className="rounded-full border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100"
-            aria-label="Compare"
-            title="Add to compare"
-          >
-            <GitCompareArrows className="h-3.5 w-3.5" />
+            <ShoppingBag className="h-4 w-4" />
+            {isOutOfStock ? 'Sold out' : 'Add to cart'}
           </button>
+
+          {/* View + Compare row */}
+          <div className="flex gap-2">
+            <Link
+              href={`/products/${product.slug}`}
+              className="flex flex-1 items-center justify-center rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+            >
+              View details
+            </Link>
+            <button
+              onClick={toggleCompare}
+              className={`flex items-center justify-center rounded-xl border px-3 py-2 transition ${
+                inCompare
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-400 hover:bg-slate-50'
+              }`}
+              aria-label={inCompare ? 'Remove from compare' : 'Add to compare'}
+              title={inCompare ? 'Remove from compare' : 'Add to compare'}
+            >
+              <GitCompareArrows className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.article>

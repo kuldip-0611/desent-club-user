@@ -15,6 +15,8 @@ export type CreateOrderPayload = {
   notes?: string
   paymentMethod?: 'COD' | 'ONLINE'
   affiliateCode?: string
+  loyaltyPoints?: number
+  storeCreditAmount?: number
 }
 
 export type CreateOrderResponse = {
@@ -159,8 +161,22 @@ export const getMyOrder = async (orderId: string): Promise<UserOrder> => {
   return data
 }
 
-export const cancelOrder = async (orderId: string, reason?: string): Promise<{ message: string }> => {
-  const { data } = await apiClient.post<{ message: string }>(`/orders/my/${orderId}/cancel`, { reason })
+export type CancelOrderPayload = {
+  reason?: string
+  variantChange?: boolean
+  requestedSize?: string
+  requestedColor?: string
+}
+
+export const cancelOrder = async (orderId: string, payload?: CancelOrderPayload): Promise<{ message: string }> => {
+  const { data } = await apiClient.post<{ message: string }>(`/orders/my/${orderId}/cancel`, payload ?? {})
+  return data
+}
+
+export type CancellationReason = { id: string; label: string }
+
+export const getCancellationReasons = async (): Promise<CancellationReason[]> => {
+  const { data } = await apiClient.get<CancellationReason[]>('/cancellation-reasons')
   return data
 }
 
@@ -169,6 +185,7 @@ export type ReturnRequestPayload = {
   type?: 'RETURN' | 'EXCHANGE'
   orderItemId?: string
   exchangeSize?: string
+  refundMethod?: 'BANK' | 'STORE_CREDIT'
 }
 
 export const requestReturn = async (
@@ -226,4 +243,12 @@ export const submitNpsSurvey = async (
   comment?: string,
 ): Promise<void> => {
   await apiClient.post(`/orders/my/${orderId}/nps`, { score, comment })
+}
+
+export const updateOrderAddress = async (
+  orderId: string,
+  addressId: string,
+): Promise<{ message: string }> => {
+  const { data } = await apiClient.patch<{ message: string }>(`/orders/my/${orderId}/address`, { addressId })
+  return data
 }

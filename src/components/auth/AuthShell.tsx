@@ -21,7 +21,7 @@ export const AuthShell = ({ title, subtitle, children }: AuthShellProps) => (
         <div className="mb-3 flex justify-center">
           <Image
             src="/logo.png"
-            alt="Desent Club logo"
+            alt="Disent Clung logo"
             width={52}
             height={52}
             className="rounded-lg ring-1 ring-white/30"

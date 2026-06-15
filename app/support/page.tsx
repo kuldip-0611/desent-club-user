@@ -7,11 +7,12 @@ import {
   supportMailtoHref,
   supportWhatsAppHref,
 } from '@/constants/support'
+import { SITE_URL } from '@/constants/site'
 
 export const metadata: Metadata = {
-  title: 'Help & Support — Desent Club',
-  description: 'Contact Desent Club support. Get help with orders, returns, payments and more.',
-  alternates: { canonical: 'https://desentclub.com/support' },
+  title: 'Help & Support — Disent Clung',
+  description: 'Contact Disent Clung support. Get help with orders, returns, payments and more.',
+  alternates: { canonical: `${SITE_URL}/support` },
 }
 
 const faqs = [
