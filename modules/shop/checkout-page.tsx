@@ -30,10 +30,18 @@ export const CheckoutPageModule = () => {
   const summary = useMemo(() => getCartSummary(lines, couponDiscount), [lines, couponDiscount])
   const [placing, setPlacing] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ONLINE')
+  const [codOtpModal, setCodOtpModal] = useState<{ orderId: string; otp: string } | null>(null)
+  const [codOtpInput, setCodOtpInput] = useState('')
+  const [codOtpVerifying, setCodOtpVerifying] = useState(false)
 
   // Store credit
   const [storeCreditBalance, setStoreCreditBalance] = useState(0)
   const [applyStoreCredit, setApplyStoreCredit] = useState(false)
+
+  // Gift card
+  const [giftCardInput, setGiftCardInput] = useState('')
+  const [giftCardApplied, setGiftCardApplied] = useState<{ code: string; balance: number } | null>(null)
+  const [giftCardChecking, setGiftCardChecking] = useState(false)
 
   // Loyalty points
   const [loyaltyAccount, setLoyaltyAccount] = useState<LoyaltyAccount | null>(null)
@@ -70,7 +78,25 @@ export const CheckoutPageModule = () => {
   // Store credit (applied after loyalty)
   const afterLoyalty = Math.max(summary.total - loyaltyDiscountAmount, 0)
   const storeCreditToApply = applyStoreCredit ? Math.min(storeCreditBalance, afterLoyalty) : 0
-  const finalTotal = Math.max(afterLoyalty - storeCreditToApply, 0)
+  const afterStoreCredit = Math.max(afterLoyalty - storeCreditToApply, 0)
+  const giftCardToApply = giftCardApplied ? Math.min(giftCardApplied.balance, afterStoreCredit) : 0
+  const finalTotal = Math.max(afterStoreCredit - giftCardToApply, 0)
+
+  const handleCheckGiftCard = async () => {
+    if (!giftCardInput.trim()) return
+    setGiftCardChecking(true)
+    try {
+      const { apiClient } = await import('@/services/api/client')
+      const { data } = await apiClient.post<{ code: string; balance: number; isValid: boolean }>('/gift-cards/check', { code: giftCardInput.trim() })
+      setGiftCardApplied({ code: data.code, balance: data.balance })
+      toast.success(`Gift card applied! ₹${data.balance.toFixed(2)} available`)
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Invalid gift card')
+    } finally {
+      setGiftCardChecking(false)
+    }
+  }
 
   const handlePlaceOrder = () => {
     requireAuth(() => { void placeOrder() })
@@ -97,12 +123,18 @@ export const CheckoutPageModule = () => {
         affiliateCode: getStoredAffiliateCode() ?? undefined,
         loyaltyPoints: loyaltyPointsToUse > 0 ? loyaltyPointsToUse : undefined,
         storeCreditAmount: storeCreditToApply > 0 ? storeCreditToApply : undefined,
+        giftCardCode: giftCardApplied?.code,
       })
 
       if (paymentMethod === 'COD') {
         clearCart()
         toast.success('Order placed! Pay cash on delivery.')
-        router.push(`/orders?placed=${orderPayload.orderId}`)
+        // Show OTP modal if backend returned an OTP
+        if (orderPayload.codOtp) {
+          setCodOtpModal({ orderId: orderPayload.orderId, otp: orderPayload.codOtp })
+        } else {
+          router.push(`/orders?placed=${orderPayload.orderId}`)
+        }
         return
       }
 
@@ -133,7 +165,69 @@ export const CheckoutPageModule = () => {
     }
   }
 
+  const handleVerifyCodOtp = async () => {
+    if (!codOtpModal || !codOtpInput.trim()) return
+    setCodOtpVerifying(true)
+    try {
+      const { apiClient } = await import('@/services/api/client')
+      await apiClient.post(`/orders/my/${codOtpModal.orderId}/verify-cod`, { otp: codOtpInput.trim() })
+      toast.success('OTP verified! Your order is confirmed.')
+      setCodOtpModal(null)
+      router.push(`/orders?placed=${codOtpModal.orderId}`)
+    } catch {
+      toast.error('Invalid OTP. Please try again.')
+    } finally {
+      setCodOtpVerifying(false)
+    }
+  }
+
   return (
+    <>
+    {/* COD OTP Modal */}
+    {codOtpModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl text-center space-y-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 mx-auto">
+            <Banknote className="h-7 w-7 text-emerald-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">COD Delivery OTP</h2>
+          <p className="text-sm text-slate-600">
+            Your order has been placed! We&apos;ve sent a 6-digit OTP to your email. Share it with the delivery agent when your order arrives.
+          </p>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
+            <p className="text-xs text-slate-500 mb-1">Your OTP</p>
+            <p className="text-3xl font-black tracking-[0.3em] text-slate-900">{codOtpModal.otp}</p>
+          </div>
+          <p className="text-xs text-slate-400">Or enter your OTP here to pre-verify:</p>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-xl font-bold tracking-[0.2em] outline-none focus:border-indigo-400"
+            placeholder="6-digit OTP"
+            value={codOtpInput}
+            onChange={(e) => setCodOtpInput(e.target.value.replace(/\D/g, ''))}
+          />
+          <Button
+            className="w-full"
+            disabled={codOtpVerifying || codOtpInput.length !== 6}
+            onClick={() => void handleVerifyCodOtp()}
+          >
+            {codOtpVerifying ? 'Verifying…' : 'Verify & Continue'}
+          </Button>
+          <button
+            type="button"
+            className="text-sm text-indigo-600 hover:underline"
+            onClick={() => {
+              setCodOtpModal(null)
+              router.push(`/orders?placed=${codOtpModal.orderId}`)
+            }}
+          >
+            I&apos;ll verify later
+          </button>
+        </div>
+      </div>
+    )}
     <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px] sm:px-6">
       <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5">
         <div>
@@ -302,6 +396,44 @@ export const CheckoutPageModule = () => {
                 )}
               </div>
             )}
+
+            {/* Gift card */}
+            <div className="rounded-xl border border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-700 mb-2">Gift Card</p>
+              {giftCardApplied ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900 font-mono">{giftCardApplied.code}</p>
+                    <p className="text-xs text-slate-500">₹{giftCardToApply.toFixed(2)} will be applied</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setGiftCardApplied(null); setGiftCardInput('') }}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-indigo-400"
+                    placeholder="XXXX-XXXX-XXXX"
+                    value={giftCardInput}
+                    onChange={(e) => setGiftCardInput(e.target.value.toUpperCase())}
+                  />
+                  <button
+                    type="button"
+                    disabled={giftCardChecking || !giftCardInput.trim()}
+                    onClick={() => void handleCheckGiftCard()}
+                    className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition"
+                  >
+                    {giftCardChecking ? '…' : 'Apply'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -328,6 +460,12 @@ export const CheckoutPageModule = () => {
               <div className="flex justify-between text-green-700 font-medium">
                 <span>⚡ Store Credit</span>
                 <span>−₹{storeCreditToApply.toFixed(2)}</span>
+              </div>
+            )}
+            {giftCardToApply > 0 && (
+              <div className="flex justify-between text-indigo-700 font-medium">
+                <span>🎁 Gift Card</span>
+                <span>−₹{giftCardToApply.toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -369,5 +507,6 @@ export const CheckoutPageModule = () => {
         </div>
       </aside>
     </main>
+    </>
   )
 }

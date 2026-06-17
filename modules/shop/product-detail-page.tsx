@@ -61,6 +61,14 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   const [notifySubmitting, setNotifySubmitting] = useState(false)
   const [notifySuccess, setNotifySuccess] = useState(false)
 
+  // Review submit
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewOrderItemId, setReviewOrderItemId] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
+  const [deliveredItems, setDeliveredItems] = useState<{ id: string; name: string; orderId: string }[]>([])
+
   const handleShare = async (platform: 'whatsapp' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
     const text = `Check out ${product?.name ?? 'this product'} on Disent Clung! ${url}`
@@ -180,6 +188,47 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
+
+  // Fetch delivered order items for this product (for review form)
+  useEffect(() => {
+    if (!product || !user) return
+    apiClient.get<{ items: { id: string; name: string; orderId: string }[] }>(`/orders/my?status=DELIVERED&limit=50`)
+      .then((res) => {
+        // Extract items that match this product
+        const orders = (res.data as unknown as { items: { id: string; status: string; items: { id: string; productId: string }[] }[] }).items ?? []
+        const matched: { id: string; name: string; orderId: string }[] = []
+        for (const order of orders) {
+          for (const item of order.items ?? []) {
+            if (item.productId === product.id) {
+              matched.push({ id: item.id, name: product.name, orderId: order.id })
+            }
+          }
+        }
+        setDeliveredItems(matched)
+        if (matched.length > 0) setReviewOrderItemId(matched[0].id)
+      })
+      .catch(() => undefined)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id, user])
+
+  const handleReviewSubmit = async () => {
+    if (!product || !reviewOrderItemId) return
+    setReviewSubmitting(true)
+    try {
+      await apiClient.post(`/shop/products/${product.slug}/reviews`, {
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+        orderItemId: reviewOrderItemId,
+      })
+      setReviewSubmitted(true)
+      toast.success('Review submitted! It will appear after moderation.')
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Could not submit review')
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
 
   // Fetch active bundle for this product
   useEffect(() => {
@@ -708,6 +757,68 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
           </div>
         )}
       </section>
+
+      {/* ── Write a review (only if user has delivered order with this product) ── */}
+      {user && deliveredItems.length > 0 && !reviewSubmitted && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <h2 className="text-xl font-bold">Write a Review</h2>
+          <p className="mt-1 text-sm text-slate-500">Share your experience with this product.</p>
+          <div className="mt-4 space-y-4">
+            {deliveredItems.length > 1 && (
+              <div>
+                <label className="text-sm font-medium text-slate-700">Select order item</label>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                  value={reviewOrderItemId}
+                  onChange={(e) => setReviewOrderItemId(e.target.value)}
+                >
+                  {deliveredItems.map((item) => (
+                    <option key={item.id} value={item.id}>Order #{item.orderId.slice(0, 8)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium text-slate-700">Rating</p>
+              <div className="mt-1 flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className={`text-2xl transition ${star <= reviewRating ? 'text-amber-400' : 'text-slate-300'}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Comment (optional)</label>
+              <textarea
+                rows={3}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                placeholder="Tell others about your experience…"
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+              />
+            </div>
+            <Button
+              disabled={reviewSubmitting || !reviewOrderItemId}
+              onClick={() => void handleReviewSubmit()}
+              className="w-full sm:w-auto"
+            >
+              {reviewSubmitting ? 'Submitting…' : 'Submit Review'}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {reviewSubmitted && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <p className="font-medium text-emerald-800">Thank you! Your review has been submitted and will appear after moderation.</p>
+        </section>
+      )}
 
       {/* ── Related products ── */}
       <section>

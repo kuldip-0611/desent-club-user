@@ -17,6 +17,7 @@ export type CreateOrderPayload = {
   affiliateCode?: string
   loyaltyPoints?: number
   storeCreditAmount?: number
+  giftCardCode?: string
 }
 
 export type CreateOrderResponse = {
@@ -26,6 +27,7 @@ export type CreateOrderResponse = {
   amount: number
   currency: string
   keyId?: string
+  codOtp?: string
 }
 
 export type VerifyPaymentPayload = {
