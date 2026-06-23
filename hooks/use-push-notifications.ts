@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getToken, onMessage } from 'firebase/messaging'
 import { getFirebaseMessaging } from '@/lib/firebase'
 import { useAuthStore } from '@/store/auth-store'
@@ -8,7 +8,6 @@ import { saveFcmToken } from '@/services/notification.service'
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? ''
 
-/** Builds the service worker URL with Firebase config as query params so the SW can initialise Firebase. */
 function buildSwUrl(): string {
   const params = new URLSearchParams({
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '',
@@ -21,67 +20,112 @@ function buildSwUrl(): string {
   return `/firebase-messaging-sw.js?${params.toString()}`
 }
 
+async function registerPush(accessToken: string): Promise<boolean> {
+  if (!VAPID_KEY) return false
+  if (typeof window === 'undefined' || !('Notification' in window)) return false
+
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') return false
+
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  await Promise.all(
+    registrations
+      .filter((r) => r.active?.scriptURL.includes('/sw.js'))
+      .map((r) => r.unregister()),
+  )
+
+  const registration =
+    (await navigator.serviceWorker.getRegistration('/')) ??
+    (await navigator.serviceWorker.register(buildSwUrl(), { scope: '/' }))
+
+  const messaging = getFirebaseMessaging()
+  if (!messaging) return false
+
+  const token = await getToken(messaging, {
+    vapidKey: VAPID_KEY,
+    serviceWorkerRegistration: registration,
+  })
+  if (!token) return false
+
+  await saveFcmToken(token, accessToken)
+
+  onMessage(messaging, (payload) => {
+    if (Notification.permission !== 'granted') return
+    new Notification(payload.notification?.title ?? 'Disent Club', {
+      body: payload.notification?.body ?? '',
+      icon: '/icon.png',
+    })
+  })
+
+  return true
+}
+
+export type PushState = 'idle' | 'loading' | 'granted' | 'denied' | 'unsupported'
+
 export function usePushNotifications() {
   const user = useAuthStore((s) => s.user)
   const accessToken = useAuthStore((s) => s.accessToken)
   const registeredRef = useRef(false)
+  const [pushState, setPushState] = useState<PushState>('idle')
 
+  // Detect current browser permission on mount
   useEffect(() => {
-    // Only run in browser, only when logged in, only once per session
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setPushState('unsupported')
+      return
+    }
+    if (Notification.permission === 'granted') setPushState('granted')
+    else if (Notification.permission === 'denied') setPushState('denied')
+    else setPushState('idle')
+  }, [])
+
+  // Auto-prompt: if permission not yet decided, ask after 4s delay once logged in
+  // If already granted, silently re-register token
+  useEffect(() => {
     if (!user || !accessToken || registeredRef.current) return
     if (typeof window === 'undefined' || !('Notification' in window)) return
 
-    async function register() {
-      try {
-        if (!VAPID_KEY) {
-          console.warn('[FCM] NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set — web push disabled')
-          return
-        }
+    const alreadyGranted = Notification.permission === 'granted'
 
-        const permission = await Notification.requestPermission()
-        if (permission !== 'granted') return
-
-        const registrations = await navigator.serviceWorker.getRegistrations()
-        await Promise.all(
-          registrations
-            .filter((reg) => reg.active?.scriptURL.includes('/sw.js'))
-            .map((reg) => reg.unregister()),
-        )
-
-        const registration = await navigator.serviceWorker.getRegistration('/')
-          ?? await navigator.serviceWorker.register(buildSwUrl(), { scope: '/' })
-
-        const messaging = getFirebaseMessaging()
-        if (!messaging) return
-
-        const token = await getToken(messaging, {
-          vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: registration,
-        })
-
-        if (!token) return
-
-        // Send token to backend
-        await saveFcmToken(token, accessToken!)
-        registeredRef.current = true
-
-        // Handle foreground messages (app is open)
-        onMessage(messaging, (payload) => {
-          const title = payload.notification?.title ?? 'Disent Club'
-          const body = payload.notification?.body ?? ''
-          // Show a native notification even when the app is open
-          if (Notification.permission === 'granted') {
-            new Notification(title, {
-              body,
-              icon: '/icon.png',
-            })
-          }
-        })
-      } catch (err) {
-        console.error('[FCM] Failed to register push notifications:', err)
-      }
+    if (alreadyGranted) {
+      registerPush(accessToken)
+        .then((ok) => { if (ok) registeredRef.current = true })
+        .catch(() => undefined)
+      return
     }
 
-    register()
+    if (Notification.permission === 'default') {
+      const timer = setTimeout(() => {
+        registerPush(accessToken)
+          .then((ok) => {
+            if (ok) {
+              registeredRef.current = true
+              setPushState('granted')
+            } else {
+              setPushState(Notification.permission === 'denied' ? 'denied' : 'idle')
+            }
+          })
+          .catch(() => undefined)
+      }, 4000)
+      return () => clearTimeout(timer)
+    }
   }, [user, accessToken])
+
+  const requestPush = async () => {
+    if (!user || !accessToken || registeredRef.current) return
+    setPushState('loading')
+    try {
+      const ok = await registerPush(accessToken)
+      if (ok) {
+        registeredRef.current = true
+        setPushState('granted')
+      } else {
+        setPushState(Notification.permission === 'denied' ? 'denied' : 'idle')
+      }
+    } catch {
+      setPushState('idle')
+    }
+  }
+
+  return { pushState, requestPush }
 }

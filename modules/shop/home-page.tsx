@@ -26,18 +26,18 @@ const variantStyles: Record<
   }
 > = {
   hero: {
-    wrapper: 'relative overflow-hidden rounded-3xl shadow-lg',
-    aspect: 'aspect-[4/3] sm:aspect-[5/3]',
+    wrapper: 'relative overflow-hidden rounded-2xl shadow-md',
+    aspect: 'aspect-[16/7] sm:aspect-[21/8]',
     overlay:
-      'absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/30 to-transparent p-6 sm:p-8 text-white',
-    title: 'max-w-md text-2xl font-black leading-tight sm:text-3xl',
-    sub: 'mt-2 max-w-md text-sm text-slate-100/90',
-    kicker: 'mb-2 text-xs uppercase tracking-[0.2em] text-white/70',
-    cta: 'mt-5 inline-block w-fit rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100',
+      'absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/20 to-transparent p-5 sm:p-7 text-white',
+    title: 'max-w-xs text-xl font-black leading-tight sm:text-2xl',
+    sub: 'mt-1.5 max-w-xs text-xs text-slate-100/90 sm:text-sm',
+    kicker: 'mb-2 text-[10px] uppercase tracking-[0.2em] text-white/60',
+    cta: 'mt-4 inline-block w-fit rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-100 sm:px-5 sm:py-2.5 sm:text-sm',
   },
   mid: {
     wrapper: 'relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-md dark:border-slate-700',
-    aspect: 'aspect-[16/10] sm:aspect-[16/9]',
+    aspect: 'aspect-[16/6] sm:aspect-[21/7]',
     overlay:
       'absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/25 to-transparent p-5 sm:p-6 text-white',
     title: 'max-w-sm text-xl font-bold leading-tight sm:text-2xl',
@@ -46,7 +46,7 @@ const variantStyles: Record<
   },
   footer: {
     wrapper: 'relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-md dark:border-slate-700',
-    aspect: 'aspect-[16/10] sm:aspect-[16/9]',
+    aspect: 'aspect-[16/6] sm:aspect-[21/7]',
     overlay:
       'absolute inset-0 flex flex-col justify-end items-start bg-gradient-to-t from-indigo-950/80 via-indigo-900/30 to-transparent p-5 sm:p-6 text-white sm:items-end sm:text-right',
     title: 'max-w-sm text-xl font-bold leading-tight sm:text-2xl',
