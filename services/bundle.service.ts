@@ -13,10 +13,16 @@ export type ActiveBundle = {
   endsAt: string | null
 }
 
+type ApiBundleProduct = { productId: string }
+type ApiBundle = Omit<ActiveBundle, 'productIds'> & { products: ApiBundleProduct[] }
+
 export const getActiveBundles = async (): Promise<ActiveBundle[]> => {
   try {
-    const { data } = await apiClient.get<ActiveBundle[]>('/bundles/active')
-    return data
+    const { data } = await apiClient.get<ApiBundle[]>('/bundles/active')
+    return (data ?? []).map((b) => ({
+      ...b,
+      productIds: (b.products ?? []).map((p) => p.productId),
+    }))
   } catch {
     return []
   }

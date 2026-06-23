@@ -23,7 +23,7 @@ export const ForgotPasswordForm = () => {
           try {
             const { message } = await forgotPassword({ email: values.email.trim() });
             toast.success(message);
-            router.push('/login');
+            router.push('/home');
           } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Request failed');
           } finally {

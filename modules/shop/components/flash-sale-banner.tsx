@@ -3,82 +3,79 @@
 import { useEffect, useState } from 'react'
 import { apiClient } from '@/services/api/client'
 
-type ActiveCoupon = {
-  code: string
-  discountType: 'PERCENT' | 'FIXED'
-  value: number
-  endsAt: string | null
-  minSubtotal?: number | null
+type FlashSale = {
+  id: string
+  title: string
+  discountPercent: number
+  startsAt: string
+  endsAt: string
+  isActive: boolean
 }
 
 function useCountdown(endsAt: string | null) {
   const [remaining, setRemaining] = useState<number | null>(null)
-
   useEffect(() => {
     if (!endsAt) return
     const end = new Date(endsAt).getTime()
-
-    const update = () => {
-      const diff = end - Date.now()
-      setRemaining(diff > 0 ? diff : 0)
-    }
+    const update = () => { const diff = end - Date.now(); setRemaining(diff > 0 ? diff : 0) }
     update()
     const id = setInterval(update, 1000)
     return () => clearInterval(id)
   }, [endsAt])
-
   return remaining
 }
 
 function formatCountdown(ms: number) {
-  const totalSecs = Math.floor(ms / 1000)
-  const h = Math.floor(totalSecs / 3600)
-  const m = Math.floor((totalSecs % 3600) / 60)
-  const s = totalSecs % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const s = Math.floor(ms / 1000)
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
 export const FlashSaleBanner = () => {
-  const [coupon, setCoupon] = useState<ActiveCoupon | null>(null)
+  const [sales, setSales] = useState<FlashSale[]>([])
+  const [currentIdx, setCurrentIdx] = useState(0)
   const [dismissed, setDismissed] = useState(false)
-  const remaining = useCountdown(coupon?.endsAt ?? null)
 
   useEffect(() => {
-    // Fetch nearest-expiring active coupon with an endsAt date
     apiClient
-      .get<ActiveCoupon[]>('/coupons/available')
-      .then(({ data }) => {
-        const withExpiry = data
-          .filter((c) => c.endsAt && new Date(c.endsAt) > new Date())
-          .sort((a, b) => new Date(a.endsAt!).getTime() - new Date(b.endsAt!).getTime())
-        setCoupon(withExpiry[0] ?? null)
-      })
-      .catch(() => {/* silently fail */})
+      .get<FlashSale[]>('/flash-sales/active-all')
+      .then(({ data }) => { if (Array.isArray(data) && data.length) setSales(data) })
+      .catch(() => {})
   }, [])
 
-  if (!coupon || dismissed || remaining === 0) return null
+  // Rotate through multiple sales every 4 seconds
+  useEffect(() => {
+    if (sales.length <= 1) return
+    const id = setInterval(() => setCurrentIdx((i) => (i + 1) % sales.length), 4000)
+    return () => clearInterval(id)
+  }, [sales.length])
 
-  const label =
-    coupon.discountType === 'PERCENT'
-      ? `${coupon.value}% off`
-      : `₹${coupon.value} off`
+  const sale = sales[currentIdx]
+  const remaining = useCountdown(sale?.endsAt ?? null)
+
+  if (!sale || dismissed || remaining === 0) return null
 
   return (
-    <div className="relative flex flex-wrap items-center justify-center gap-3 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-6 py-3 text-white shadow-md">
-      <span className="text-lg">🔥</span>
+    <div className="relative flex flex-wrap items-center justify-center gap-3 bg-slate-900 px-6 py-2.5 text-white dark:bg-white dark:text-slate-900">
+      <span className="text-base">🔥</span>
       <p className="text-sm font-semibold">
-        Flash Sale! Get <span className="font-black text-yellow-300">{label}</span> with code{' '}
-        <span className="rounded bg-white/20 px-2 py-0.5 font-mono font-bold tracking-widest">{coupon.code}</span>
-        {coupon.minSubtotal ? ` on orders above ₹${coupon.minSubtotal}` : ''}
+        {sale.title} —{' '}
+        <span className="font-black text-yellow-300 dark:text-yellow-600">{sale.discountPercent}% off</span>
+        {' '}on selected products
       </p>
       {remaining !== null && remaining > 0 && (
-        <span className="rounded-lg bg-black/30 px-3 py-1 font-mono text-sm font-bold tabular-nums">
+        <span className="rounded-md bg-white/20 px-2.5 py-0.5 font-mono text-xs font-bold tabular-nums dark:bg-slate-900/20">
           ⏱ {formatCountdown(remaining)}
+        </span>
+      )}
+      {sales.length > 1 && (
+        <span className="text-xs text-white/60 dark:text-slate-500">
+          {currentIdx + 1}/{sales.length}
         </span>
       )}
       <button
         onClick={() => setDismissed(true)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-white/20"
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 opacity-70 hover:opacity-100"
         aria-label="Dismiss"
       >
         ✕

@@ -46,7 +46,7 @@ export const ResetPasswordForm = ({ token }: ResetPasswordFormProps) => {
             });
             toast.success(message);
             await logout();
-            router.push('/');
+            router.push('/home');
           } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Reset failed');
           } finally {

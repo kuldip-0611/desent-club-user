@@ -126,7 +126,7 @@ export const Navbar = () => {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'text-sm font-medium transition-colors',
+                  'whitespace-nowrap text-sm font-medium transition-colors',
                   isDark ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-slate-900',
                 )}
               >

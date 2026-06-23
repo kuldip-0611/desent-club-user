@@ -18,8 +18,12 @@ export type ShopCategory = {
   subcategories: { id: string; name: string; slug: string; productCount: number }[]
 }
 
+export type HomeBanner = { title: string; subtitle: string; image: string; href: string }
+
 export type ShopHomeResponse = {
-  banners: { title: string; subtitle: string; image: string; href: string }[]
+  banners: HomeBanner[]
+  midBanners: HomeBanner[]
+  footerBanners: HomeBanner[]
   categories: ShopCategory[]
   featured: Product[]
   newest: Product[]
@@ -149,11 +153,16 @@ export const subscribeBackInStock = async (
   await apiClient.post(`/products/${productId}/notify-me`, { email, size })
 }
 
+const mapBanners = (list: HomeBanner[] = []) =>
+  list.map((b) => ({ ...b, image: mediaUrl(b.image) }))
+
 export const getShopHome = async (): Promise<ShopHomeResponse> => {
   const { data } = await apiClient.get<ShopHomeResponse>('/shop/home')
   return {
     ...data,
-    banners: data.banners.map((banner) => ({ ...banner, image: mediaUrl(banner.image) })),
+    banners: mapBanners(data.banners),
+    midBanners: mapBanners(data.midBanners),
+    footerBanners: mapBanners(data.footerBanners),
     categories: data.categories.map((item) => ({
       ...item,
       image: item.image ? mediaUrl(item.image) : null,

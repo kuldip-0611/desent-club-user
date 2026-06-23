@@ -31,8 +31,10 @@ export const StoreShell = ({ children }: StoreShellProps) => (
     <Suspense fallback={null}>
       <AppWatchers />
     </Suspense>
-    <FlashSaleBanner />
-    <Navbar />
+    <div className="sticky top-0 z-50">
+      <FlashSaleBanner />
+      <Navbar />
+    </div>
     {children}
     <Footer />
     <AuthModal />

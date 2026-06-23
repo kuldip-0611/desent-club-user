@@ -2,43 +2,158 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useCallback } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
 import { RecentlyViewedSection } from '@/modules/shop/components/recently-viewed'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useShopHomeQuery } from '@/hooks/query/use-products-query'
+import type { HomeBanner } from '@/services/product.service'
+
+// ── Banner carousel ────────────────────────────────────────────────────────────
+
+type BannerVariant = 'hero' | 'mid' | 'footer'
+
+const variantStyles: Record<BannerVariant, { wrapper: string; aspect: string; overlay: string; title: string; sub: string }> = {
+  hero: {
+    wrapper: 'relative overflow-hidden rounded-3xl',
+    aspect: 'aspect-[5/3]',
+    overlay: 'absolute inset-0 bg-gradient-to-r from-black/60 to-black/15 p-8 text-white flex flex-col justify-end',
+    title: 'max-w-sm text-3xl font-black leading-tight',
+    sub: 'mt-2 max-w-sm text-sm text-slate-100',
+  },
+  mid: {
+    wrapper: 'relative overflow-hidden rounded-2xl',
+    aspect: 'aspect-[16/5] md:aspect-[21/6]',
+    overlay: 'absolute inset-0 bg-gradient-to-r from-black/55 to-transparent p-8 text-white flex flex-col justify-center',
+    title: 'max-w-lg text-2xl font-black leading-tight md:text-3xl',
+    sub: 'mt-2 max-w-md text-sm text-slate-200',
+  },
+  footer: {
+    wrapper: 'relative overflow-hidden rounded-2xl',
+    aspect: 'aspect-[16/5] md:aspect-[21/6]',
+    overlay: 'absolute inset-0 bg-gradient-to-l from-black/55 to-transparent p-8 text-white flex flex-col justify-center items-end text-right',
+    title: 'max-w-lg text-2xl font-black leading-tight md:text-3xl',
+    sub: 'mt-2 max-w-md text-sm text-slate-200',
+  },
+}
+
+const BannerSlide = ({ banner, variant }: { banner: HomeBanner; variant: BannerVariant }) => {
+  const s = variantStyles[variant]
+  const hasImage = Boolean(banner.image)
+
+  return (
+    <div className={`${s.wrapper} ${s.aspect} w-full ${!hasImage ? 'bg-slate-900' : ''}`}>
+      {hasImage && (
+        <Image src={banner.image} alt={banner.title} fill className="object-cover" />
+      )}
+      <div className={`${s.overlay} ${!hasImage ? 'bg-gradient-to-r from-slate-800/80 to-slate-700/60' : ''}`}>
+        {variant === 'hero' && (
+          <p className="text-xs uppercase tracking-[0.2em] mb-3">New season drop</p>
+        )}
+        <h2 className={s.title}>{banner.title}</h2>
+        {banner.subtitle && <p className={s.sub}>{banner.subtitle}</p>}
+        <Link
+          href={banner.href}
+          className="mt-5 inline-block w-fit rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100 transition"
+        >
+          Shop now
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+const BannerCarousel = ({ banners, variant }: { banners: HomeBanner[]; variant: BannerVariant }) => {
+  const [idx, setIdx] = useState(0)
+
+  const prev = useCallback(() => setIdx((i) => (i - 1 + banners.length) % banners.length), [banners.length])
+  const next = useCallback(() => setIdx((i) => (i + 1) % banners.length), [banners.length])
+
+  useEffect(() => {
+    if (banners.length <= 1) return
+    const id = setInterval(next, 5000)
+    return () => clearInterval(id)
+  }, [banners.length, next])
+
+  if (banners.length === 0) return null
+
+  return (
+    <div className="relative">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -40 }}
+          transition={{ duration: 0.35 }}
+        >
+          <BannerSlide banner={banners[idx]} variant={variant} />
+        </motion.div>
+      </AnimatePresence>
+
+      {banners.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm hover:bg-black/60 transition"
+            aria-label="Previous banner"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm hover:bg-black/60 transition"
+            aria-label="Next banner"
+          >
+            <ChevronRight size={18} />
+          </button>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {banners.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Hero section: always carousel ─────────────────────────────────────────────
+
+const HeroBanners = ({ banners }: { banners: HomeBanner[] }) => {
+  if (banners.length === 0) return null
+  return (
+    <section>
+      <BannerCarousel banners={banners} variant="hero" />
+    </section>
+  )
+}
+
+// ── Main home page ─────────────────────────────────────────────────────────────
 
 export const HomePageModule = () => {
   const { data, isLoading } = useShopHomeQuery()
   const banners = data?.banners ?? []
+  const midBanners = data?.midBanners ?? []
+  const footerBanners = data?.footerBanners ?? []
   const categories = data?.categories ?? []
   const bestSellers = data?.bestSellers ?? []
   const newArrivals = data?.newest ?? []
 
   return (
     <main className="mx-auto max-w-7xl space-y-14 px-4 py-8 sm:px-6">
-      <section className="grid gap-4 md:grid-cols-2">
-        {(banners.length ? banners : []).slice(0, 2).map((banner, index) => (
-          <motion.article
-            key={banner.image}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.08 }}
-            className="relative aspect-[5/3] overflow-hidden rounded-3xl"
-          >
-            <Image src={banner.image} alt={banner.title} fill className="object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/10 p-8 text-white">
-              <p className="text-xs uppercase tracking-[0.2em]">New season drop</p>
-              <h1 className="mt-3 max-w-sm text-3xl font-black leading-tight">{banner.title}</h1>
-              <p className="mt-2 max-w-sm text-sm text-slate-100">{banner.subtitle}</p>
-              <Link href={banner.href} className="mt-6 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900">
-                Shop now
-              </Link>
-            </div>
-          </motion.article>
-        ))}
-      </section>
 
+      {/* Hero banners */}
+      <HeroBanners banners={banners} />
+
+      {/* Categories */}
       <section>
         <h2 className="mb-5 text-2xl font-bold">Shop by category</h2>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
@@ -73,6 +188,7 @@ export const HomePageModule = () => {
         </div>
       </section>
 
+      {/* Best sellers */}
       <section>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Best sellers</h2>
@@ -95,14 +211,14 @@ export const HomePageModule = () => {
         )}
       </section>
 
-      <section className="rounded-3xl bg-slate-900 px-8 py-10 text-white">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Limited offer</p>
-        <h3 className="mt-2 text-3xl font-black">Up to 40% off on selected performance styles</h3>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Grab signature fits from our active and streetwear collections while stock lasts.
-        </p>
-      </section>
+      {/* Mid banners */}
+      {midBanners.length > 0 && (
+        <section>
+          <BannerCarousel banners={midBanners} variant="mid" />
+        </section>
+      )}
 
+      {/* New arrivals */}
       <section>
         <h2 className="mb-5 text-2xl font-bold">New arrivals</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -114,6 +230,14 @@ export const HomePageModule = () => {
 
       <RecentlyViewedSection />
 
+      {/* Footer banners */}
+      {footerBanners.length > 0 && (
+        <section>
+          <BannerCarousel banners={footerBanners} variant="footer" />
+        </section>
+      )}
+
+      {/* Trust signals */}
       <section className="grid gap-4 md:grid-cols-3">
         {['Fast shipping', 'Easy returns', 'Premium quality'].map((item) => (
           <div key={item} className="rounded-2xl border border-slate-200 bg-white p-5">
