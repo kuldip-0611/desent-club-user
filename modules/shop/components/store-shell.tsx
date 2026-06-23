@@ -7,7 +7,6 @@ import { AuthModal } from '@/modules/shop/components/auth-modal'
 import { CartDrawer } from '@/modules/shop/components/cart-drawer'
 import { FlashSaleBanner } from '@/modules/shop/components/flash-sale-banner'
 import { useCartSync } from '@/hooks/use-cart-sync'
-import { useServiceWorker } from '@/hooks/use-service-worker'
 import { useUtmTracking } from '@/hooks/use-utm'
 
 type StoreShellProps = {
@@ -20,7 +19,6 @@ const CartSyncWatcher = () => {
 }
 
 const AppWatchers = () => {
-  useServiceWorker()
   useUtmTracking()
   return null
 }

@@ -33,13 +33,23 @@ export function usePushNotifications() {
 
     async function register() {
       try {
+        if (!VAPID_KEY) {
+          console.warn('[FCM] NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set — web push disabled')
+          return
+        }
+
         const permission = await Notification.requestPermission()
         if (permission !== 'granted') return
 
-        // Register the service worker (passes config via query-string)
-        const registration = await navigator.serviceWorker.register(buildSwUrl(), {
-          scope: '/',
-        })
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(
+          registrations
+            .filter((reg) => reg.active?.scriptURL.includes('/sw.js'))
+            .map((reg) => reg.unregister()),
+        )
+
+        const registration = await navigator.serviceWorker.getRegistration('/')
+          ?? await navigator.serviceWorker.register(buildSwUrl(), { scope: '/' })
 
         const messaging = getFirebaseMessaging()
         if (!messaging) return

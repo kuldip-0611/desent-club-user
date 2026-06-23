@@ -18,7 +18,7 @@ const messaging = firebase.messaging()
 
 // Handle background messages (app is not in focus)
 messaging.onBackgroundMessage((payload) => {
-  const { title = 'Disent Clung', body = '' } = payload.notification ?? {}
+  const { title = 'Disent Club', body = '' } = payload.notification ?? {}
   self.registration.showNotification(title, {
     body,
     icon: '/icon.png',

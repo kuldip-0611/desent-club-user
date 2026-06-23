@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, Menu, Moon, Search, ShoppingBag, Sun, User, X } from 'lucide-react'
-import { NotificationBell } from './notification-bell'
 import { useQuery } from '@tanstack/react-query'
 import { MAIN_NAV } from '@/constants/navigation'
 import { getCartCount, useCartStore } from '@/store/cart-store'
@@ -227,7 +226,6 @@ export const Navbar = () => {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <NotificationBell isDark={isDark} />
             <Link
               href="/wishlist"
               className={cn('relative rounded-full p-2', isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-100')}
