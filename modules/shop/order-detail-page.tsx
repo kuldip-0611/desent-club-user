@@ -250,11 +250,11 @@ function CancelOrderModal({
 
       {/* Address change — inline address picker */}
       {isAddressChange && (
-        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 p-4 space-y-3">
-          <p className="text-xs font-semibold text-indigo-800">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+          <p className="text-xs font-semibold text-slate-800">
             📍 Change delivery address — no need to cancel!
           </p>
-          <p className="text-xs text-indigo-600">
+          <p className="text-xs text-slate-600">
             Select a saved address below and we&apos;ll update your order instantly.
           </p>
           {addressesLoading ? (
@@ -262,7 +262,7 @@ function CancelOrderModal({
           ) : addresses.length === 0 ? (
             <p className="text-xs text-slate-500">
               No saved addresses found.{' '}
-              <a href="/profile/addresses" className="font-medium text-indigo-600 underline">
+              <a href="/profile/addresses" className="font-medium text-slate-900 underline">
                 Add one
               </a>{' '}
               then come back.
@@ -274,8 +274,8 @@ function CancelOrderModal({
                   key={addr.id}
                   className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition ${
                     selectedAddressId === addr.id
-                      ? 'border-indigo-500 bg-white ring-1 ring-indigo-300'
-                      : 'border-slate-200 bg-white hover:border-indigo-300'
+                      ? 'border-slate-900 bg-white ring-1 ring-slate-300'
+                      : 'border-slate-200 bg-white hover:border-slate-400'
                   }`}
                 >
                   <input
@@ -284,13 +284,13 @@ function CancelOrderModal({
                     value={addr.id}
                     checked={selectedAddressId === addr.id}
                     onChange={() => setSelectedAddressId(addr.id)}
-                    className="mt-0.5 accent-indigo-600"
+                    className="mt-0.5 accent-slate-900"
                   />
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-800">
                       {addr.fullName}
                       {addr.isDefault && (
-                        <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                        <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
                           Default
                         </span>
                       )}
@@ -310,7 +310,7 @@ function CancelOrderModal({
               Keep original
             </Button>
             <Button
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+              className="flex-1"
               disabled={!selectedAddressId || addressSaving}
               onClick={() => void handleUpdateAddress()}
             >
@@ -596,7 +596,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Link href="/orders" className="text-sm text-indigo-600 hover:underline">
+          <Link href="/orders" className="text-sm text-slate-700 hover:underline">
             ← Back to orders
           </Link>
           <h1 className="mt-1 text-2xl font-bold">Order #{order.id.slice(0, 8)}</h1>
@@ -617,7 +617,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
             <div className="absolute left-0 right-0 top-4 h-0.5 bg-slate-200" aria-hidden="true" />
             {/* Filled connector — grows with progress */}
             <div
-              className="absolute left-0 top-4 h-0.5 bg-indigo-600 transition-all duration-500"
+              className="absolute left-0 top-4 h-0.5 bg-slate-900 transition-all duration-500"
               style={{ width: `${(currentStep / (ORDER_TIMELINE.length - 1)) * 100}%` }}
               aria-hidden="true"
             />
@@ -630,16 +630,16 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-bold shadow-sm transition-all duration-300 ${
                       done
-                        ? 'border-indigo-600 bg-indigo-600 text-white'
+                        ? 'border-slate-900 bg-slate-900 text-white'
                         : 'border-slate-300 bg-white text-slate-400'
-                    } ${active ? 'ring-4 ring-indigo-100' : ''}`}
+                    } ${active ? 'ring-4 ring-slate-200' : ''}`}
                   >
                     {done ? <span>{icons[index]}</span> : <span className="text-xs">{index + 1}</span>}
                   </div>
                   <p
                     className={`mt-2 max-w-[64px] text-[10px] leading-tight sm:text-xs ${
                       done ? 'font-semibold text-slate-900' : 'text-slate-400'
-                    } ${active ? 'text-indigo-700' : ''}`}
+                    } ${active ? 'text-slate-900' : ''}`}
                   >
                     {step.label}
                   </p>
@@ -658,7 +658,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
             {!trackingLoading && (
               <button
                 type="button"
-                className="text-xs text-indigo-600 hover:underline"
+                className="text-xs text-slate-600 hover:underline"
                 onClick={() => void loadTracking()}
               >
                 Refresh
@@ -689,7 +689,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                       href={tracking.trackingUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                      className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
                     >
                       Track on Shiprocket ↗
                     </a>
@@ -708,7 +708,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                           <ol className="relative border-l border-slate-200 pl-4">
                             {activities.slice(0, 6).map((act, i) => (
                               <li key={i} className="mb-3 ml-1">
-                                <div className="absolute -left-1.5 h-3 w-3 rounded-full bg-indigo-500" />
+                                <div className="absolute -left-1.5 h-3 w-3 rounded-full bg-slate-900" />
                                 <p className="font-medium text-slate-800">{act.activity}</p>
                                 <p className="text-xs text-slate-500">
                                   {act.location} · {act.date}
@@ -744,7 +744,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
         <div
           className={`rounded-xl border p-4 text-sm ${
             latestReturn.type === 'EXCHANGE'
-              ? 'border-indigo-100 bg-indigo-50 text-indigo-900'
+              ? 'border-slate-200 bg-slate-50 text-slate-900'
               : 'border-amber-100 bg-amber-50 text-amber-900'
           }`}
         >
@@ -753,7 +753,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               {RETURN_STATUS_LABEL[latestReturn.status] ?? latestReturn.status}
             </p>
             {latestReturn.type === 'EXCHANGE' ? (
-              <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+              <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-900">
                 🔄 Size Exchange → {latestReturn.exchangeSize}
               </span>
             ) : (
@@ -790,7 +790,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                 href={`https://shiprocket.co/tracking/${latestReturn.exchangeAwbCode}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono font-semibold text-indigo-700 underline underline-offset-2"
+                className="font-mono font-semibold text-slate-900 underline underline-offset-2"
               >
                 {latestReturn.exchangeAwbCode}
               </a>
@@ -870,12 +870,12 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       ) : null}
 
       {order.actions?.canReview && unreviewedItems.length > 0 ? (
-        <section className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5">
-          <p className="font-semibold text-indigo-900">Rate your purchase</p>
-          <p className="mt-1 text-sm text-indigo-800">Share your experience — it helps other shoppers.</p>
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <p className="font-semibold text-slate-900">Rate your purchase</p>
+          <p className="mt-1 text-sm text-slate-600">Share your experience — it helps other shoppers.</p>
           <div className="mt-4 space-y-4">
             {unreviewedItems.map((item) => (
-              <div key={item.id} className="rounded-xl border border-indigo-100 bg-white p-4">
+              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-sm font-medium">{item.product.name}</p>
                 <div className="mt-2 flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -936,7 +936,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                         ? score >= 9
                           ? 'border-emerald-500 bg-emerald-500 text-white'
                           : score >= 7
-                            ? 'border-indigo-500 bg-indigo-500 text-white'
+                            ? 'border-slate-900 bg-slate-900 text-white'
                             : 'border-red-500 bg-red-500 text-white'
                         : 'border-slate-200 text-slate-700 hover:border-slate-400'
                     }`}
@@ -948,7 +948,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               {npsScore !== null && (
                 <div className="mt-3 space-y-2">
                   <textarea
-                    className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-indigo-400"
+                    className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-slate-900"
                     rows={2}
                     placeholder="Tell us more (optional)…"
                     value={npsComment}
@@ -979,7 +979,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               setInvoiceLoading(false)
             }
           }}
-          className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 rounded-xl border border-slate-900 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-900 hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <FileDown className={`h-4 w-4 ${invoiceLoading ? 'animate-bounce' : ''}`} />
           {invoiceLoading ? 'Downloading…' : 'Download Invoice'}
@@ -1016,7 +1016,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <button
                       onClick={() => handleChooseType('RETURN')}
-                      className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 p-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50"
+                      className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 p-4 text-center transition hover:border-slate-900 hover:bg-slate-50"
                     >
                       <span className="text-2xl">↩️</span>
                       <span className="text-sm font-semibold text-slate-800">Return for refund</span>
@@ -1024,7 +1024,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                     </button>
                     <button
                       onClick={() => handleChooseType('EXCHANGE')}
-                      className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 p-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50"
+                      className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 p-4 text-center transition hover:border-slate-900 hover:bg-slate-50"
                     >
                       <span className="text-2xl">🔄</span>
                       <span className="text-sm font-semibold text-slate-800">Exchange size</span>
@@ -1062,8 +1062,8 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                       onClick={() => setRefundMethod('BANK')}
                       className={`flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition ${
                         refundMethod === 'BANK'
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                          ? 'border-slate-900 bg-slate-50'
+                          : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50'
                       }`}
                     >
                       <span className="text-2xl">🏦</span>
@@ -1095,7 +1095,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                       <button
                         key={item.id}
                         onClick={() => void handleSelectItemForExchange(item)}
-                        className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-indigo-400 hover:bg-indigo-50"
+                        className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-slate-900 hover:bg-slate-50"
                       >
                         {item.product.images[0] && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -1108,7 +1108,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                         <div>
                           <p className="text-sm font-medium text-slate-800">{item.product.name}</p>
                           <p className="text-xs text-slate-500">
-                            Size: <span className="font-semibold text-indigo-600">{item.size}</span>
+                            Size: <span className="font-semibold text-slate-900">{item.size}</span>
                             {item.color ? ` · ${item.color}` : ''} · Qty {item.quantity}
                           </p>
                         </div>
@@ -1126,7 +1126,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                 <>
                   <p className="text-sm font-semibold text-slate-800">
                     Select a different size for{' '}
-                    <span className="text-indigo-600">{selectedItemForExchange?.product.name}</span>
+                    <span className="text-slate-900">{selectedItemForExchange?.product.name}</span>
                   </p>
                   {itemSizes && (
                     <p className="mt-0.5 text-xs text-slate-500">
@@ -1151,8 +1151,8 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                           }}
                           className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
                             exchangeSize === s.size
-                              ? 'border-indigo-500 bg-indigo-500 text-white'
-                              : 'border-slate-200 text-slate-700 hover:border-indigo-400'
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-200 text-slate-700 hover:border-slate-900'
                           }`}
                         >
                           {s.size}
@@ -1178,7 +1178,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                 <>
                   <div className="mb-3 flex items-center gap-2">
                     {returnType === 'EXCHANGE' ? (
-                      <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                      <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-900">
                         🔄 Size Exchange → {exchangeSize}
                       </span>
                     ) : (
@@ -1193,7 +1193,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                       : 'Return reason (min 10 characters)'}
                   </p>
                   <textarea
-                    className="mt-2 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-indigo-400"
+                    className="mt-2 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-slate-900"
                     rows={3}
                     placeholder={
                       returnType === 'EXCHANGE'
@@ -1241,7 +1241,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               <Link
                 key={product.id}
                 href={`/products/${product.id}`}
-                className="group rounded-xl border border-slate-100 bg-slate-50 p-2 transition hover:border-indigo-300 hover:bg-indigo-50"
+                className="group rounded-xl border border-slate-100 bg-slate-50 p-2 transition hover:border-slate-900 hover:bg-slate-50"
               >
                 {product.images?.[0] && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -1251,7 +1251,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                     className="h-28 w-full rounded-lg object-cover"
                   />
                 )}
-                <p className="mt-2 truncate text-xs font-semibold text-slate-800 group-hover:text-indigo-700">
+                <p className="mt-2 truncate text-xs font-semibold text-slate-800 group-hover:text-slate-900">
                   {product.name}
                 </p>
                 <p className="text-xs text-slate-500">

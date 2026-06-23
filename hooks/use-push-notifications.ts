@@ -57,7 +57,7 @@ export function usePushNotifications() {
 
         // Handle foreground messages (app is open)
         onMessage(messaging, (payload) => {
-          const title = payload.notification?.title ?? 'Disent Clung'
+          const title = payload.notification?.title ?? 'Disent Club'
           const body = payload.notification?.body ?? ''
           // Show a native notification even when the app is open
           if (Notification.permission === 'granted') {

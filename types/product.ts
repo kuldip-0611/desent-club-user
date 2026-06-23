@@ -55,4 +55,6 @@ export type ProductFilters = {
   sort?: 'featured' | 'price-low' | 'price-high' | 'newest' | 'rating'
   page?: number
   limit?: number
+  ids?: string
+  fabrics?: string[]
 }

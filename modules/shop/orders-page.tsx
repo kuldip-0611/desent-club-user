@@ -137,7 +137,7 @@ export const OrdersPageModule = () => {
                     <span className="font-bold">Rs. {order.total}</span>
                     <Link
                       href={`/orders/${order.id}`}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+                      className="rounded-lg border border-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-slate-900 hover:text-white"
                     >
                       View details
                     </Link>

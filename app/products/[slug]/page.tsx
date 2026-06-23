@@ -23,8 +23,8 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
         category: { name: string }
       }
 
-      const title = `${product.name} | Disent Clung`
-      const description = product.description?.slice(0, 160) || `Buy ${product.name} at Disent Clung — premium clothing delivered to your door.`
+      const title = `${product.name} | Disent Club`
+      const description = product.description?.slice(0, 160) || `Buy ${product.name} at Disent Club — premium clothing delivered to your door.`
       const image = product.images[0] ?? `${SITE_URL}/og-default.jpg`
 
       return {
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
           description,
           images: [image],
         },
-        keywords: [product.name, product.category.name, 'clothing', 'fashion', 'Disent Clung'],
+        keywords: [product.name, product.category.name, 'clothing', 'fashion', 'Disent Club'],
       }
     }
   } catch {
@@ -52,8 +52,8 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
 
   const humanName = slug.split('--')[0]?.replace(/-/g, ' ') ?? slug
   return {
-    title: `${humanName} | Disent Clung`,
-    description: `Buy ${humanName} at Disent Clung — premium clothing delivered to your door.`,
+    title: `${humanName} | Disent Club`,
+    description: `Buy ${humanName} at Disent Club — premium clothing delivered to your door.`,
   }
 }
 

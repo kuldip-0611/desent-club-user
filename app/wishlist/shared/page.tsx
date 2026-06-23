@@ -1,6 +1,7 @@
-'use client';
+'use client'
+export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -15,6 +16,10 @@ interface Product {
 }
 
 export default function SharedWishlistPage() {
+  return <Suspense><SharedWishlistPageInner /></Suspense>
+}
+
+function SharedWishlistPageInner() {
   const params = useSearchParams();
   const ids = useMemo(() => (params.get('ids') ?? '').split(',').filter(Boolean), [params]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,11 +27,8 @@ export default function SharedWishlistPage() {
 
   useEffect(() => {
     if (!ids.length) { setLoading(false); return; }
-    listProducts({ limit: 50 })
-      .then((res) => {
-        const filtered = (res.items ?? []).filter((p) => ids.includes(p.id)) as Product[];
-        setProducts(filtered);
-      })
+    listProducts({ ids: ids.join(','), limit: ids.length })
+      .then((res) => setProducts((res.items ?? []) as Product[]))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [ids]);
@@ -43,7 +45,7 @@ export default function SharedWishlistPage() {
     <section className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-bold text-slate-900">Shared Wishlist</h1>
-        <p className="mt-1 text-sm text-slate-500">Someone shared their Disent Clung wishlist with you</p>
+        <p className="mt-1 text-sm text-slate-500">Someone shared their Disent Club wishlist with you</p>
 
         {products.length === 0 ? (
           <div className="mt-10 text-center text-slate-400">No products found</div>

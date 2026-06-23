@@ -136,7 +136,7 @@ export const CartDrawer = () => {
                 </Button>
               </Link>
               <Link href="/checkout" onClick={() => setOpen(false)} className="min-w-0">
-                <Button className="h-11 w-full bg-indigo-600 hover:bg-indigo-500">Checkout</Button>
+                <Button className="h-11 w-full bg-slate-900 hover:bg-slate-700">Checkout</Button>
               </Link>
             </div>
           </div>

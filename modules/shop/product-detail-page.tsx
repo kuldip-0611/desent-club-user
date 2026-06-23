@@ -68,10 +68,11 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
   const [deliveredItems, setDeliveredItems] = useState<{ id: string; name: string; orderId: string }[]>([])
+  const [hasPendingOrder, setHasPendingOrder] = useState(false)
 
   const handleShare = async (platform: 'whatsapp' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
-    const text = `Check out ${product?.name ?? 'this product'} on Disent Clung! ${url}`
+    const text = `Check out ${product?.name ?? 'this product'} on Disent Club! ${url}`
     if (platform === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
     } else {
@@ -189,23 +190,29 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
 
-  // Fetch delivered order items for this product (for review form)
+  // Fetch order status for this product — gate review form on DELIVERED only
   useEffect(() => {
     if (!product || !user) return
-    apiClient.get<{ items: { id: string; name: string; orderId: string }[] }>(`/orders/my?status=DELIVERED&limit=50`)
+    type OrderItem = { id: string; productId: string }
+    type Order = { id: string; status: string; items: OrderItem[] }
+    apiClient.get<{ items: Order[] }>(`/orders/my?limit=100`)
       .then((res) => {
-        // Extract items that match this product
-        const orders = (res.data as unknown as { items: { id: string; status: string; items: { id: string; productId: string }[] }[] }).items ?? []
-        const matched: { id: string; name: string; orderId: string }[] = []
+        const orders: Order[] = (res.data as unknown as { items: Order[] }).items ?? []
+        const deliveredMatched: { id: string; name: string; orderId: string }[] = []
+        let pendingFound = false
         for (const order of orders) {
           for (const item of order.items ?? []) {
-            if (item.productId === product.id) {
-              matched.push({ id: item.id, name: product.name, orderId: order.id })
+            if (item.productId !== product.id) continue
+            if (order.status === 'DELIVERED') {
+              deliveredMatched.push({ id: item.id, name: product.name, orderId: order.id })
+            } else if (['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(order.status)) {
+              pendingFound = true
             }
           }
         }
-        setDeliveredItems(matched)
-        if (matched.length > 0) setReviewOrderItemId(matched[0].id)
+        setDeliveredItems(deliveredMatched)
+        setHasPendingOrder(pendingFound)
+        if (deliveredMatched.length > 0) setReviewOrderItemId(deliveredMatched[0].id)
       })
       .catch(() => undefined)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -313,15 +320,15 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
               <>
                 <button
                   onClick={() => setActiveImage((i) => (i - 1 + displayImages.length) % displayImages.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4 text-slate-900 dark:text-white" />
                 </button>
                 <button
                   onClick={() => setActiveImage((i) => (i + 1) % displayImages.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4 text-slate-900 dark:text-white" />
                 </button>
               </>
             )}
@@ -330,7 +337,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
             {displayImages.map((img, idx) => (
               <button
                 key={img}
-                className={`relative aspect-square overflow-hidden rounded-xl border ${idx === activeImage ? 'border-indigo-600' : 'border-slate-200'}`}
+                className={`relative aspect-square overflow-hidden rounded-xl border ${idx === activeImage ? 'border-slate-900' : 'border-slate-200'}`}
                 onClick={() => setActiveImage(idx)}
               >
                 <Image src={img} alt={`${product.name} ${idx + 1}`} fill className="object-cover" />
@@ -342,9 +349,9 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
         {/* ── Product info ── */}
         <div className="space-y-4">
           <nav className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-            <Link href="/products" className="hover:text-indigo-600">Products</Link>
+            <Link href="/products" className="hover:text-slate-600">Products</Link>
             <span>/</span>
-            <Link href={`/products?category=${product.category.slug}`} className="hover:text-indigo-600">
+            <Link href={`/products?category=${product.category.slug}`} className="hover:text-slate-600">
               {product.category.name}
             </Link>
             {product.subcategory ? (
@@ -352,7 +359,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                 <span>/</span>
                 <Link
                   href={`/products?category=${product.category.slug}&subcategory=${product.subcategory.slug}`}
-                  className="hover:text-indigo-600"
+                  className="hover:text-slate-600"
                 >
                   {product.subcategory.name}
                 </Link>
@@ -424,7 +431,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                 </p>
                 <button
                   onClick={() => void openSizeGuide()}
-                  className="flex items-center gap-1 text-xs text-indigo-600 hover:underline"
+                  className="flex items-center gap-1 text-xs text-slate-900 hover:underline"
                 >
                   <Ruler className="h-3.5 w-3.5" />
                   Size guide
@@ -441,10 +448,10 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                       disabled={allOos}
                       className={`relative min-w-[3rem] rounded-xl border px-4 py-2 text-sm font-medium transition ${
                         isSelected
-                          ? 'border-black bg-black text-white shadow-sm'
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-slate-900'
                           : allOos
-                            ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300 line-through'
-                            : 'border-slate-300 text-slate-800 hover:border-slate-500'
+                            ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 line-through dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500'
+                            : 'border-slate-300 text-slate-700 hover:border-slate-900 hover:bg-slate-900 hover:text-white dark:border-slate-600 dark:text-slate-200 dark:hover:border-white dark:hover:bg-white dark:hover:text-slate-900'
                       }`}
                     >
                       {size}
@@ -473,15 +480,15 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                         title={item.colorName}
                         className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition ${
                           isSelected
-                            ? 'border-black bg-black text-white shadow-sm'
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-slate-900'
                             : oos
-                              ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300 line-through'
-                              : 'border-slate-300 text-slate-700 hover:border-slate-500'
+                              ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 line-through dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500'
+                              : 'border-slate-300 text-slate-700 hover:border-slate-900 hover:bg-slate-900 hover:text-white dark:border-slate-600 dark:text-slate-200 dark:hover:border-white dark:hover:bg-white dark:hover:text-slate-900'
                         }`}
                       >
                         {/* Color swatch dot */}
                         <span
-                          className="inline-block h-3 w-3 flex-shrink-0 rounded-full border border-white/40 shadow-sm"
+                          className="inline-block h-3 w-3 flex-shrink-0 rounded-full border border-slate-300 shadow-sm dark:border-white/40"
                           style={{ background: item.colorHex ?? '#ccc' }}
                         />
                         {item.colorName}
@@ -496,7 +503,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
 
           {/* ── Bundle Banner ── */}
           {activeBundle && (
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+            <div className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-800">
               🎁{' '}
               <strong>
                 Buy {activeBundle.minItems}+ items from this collection — get{' '}
@@ -551,14 +558,14 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                   <div className="mt-3 space-y-2">
                     <input
                       type="email"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
                       placeholder="your@email.com"
                       value={notifyEmail}
                       onChange={(e) => setNotifyEmail(e.target.value)}
                     />
                     {product.variants.length > 0 && (
                       <select
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
                         value={notifySize}
                         onChange={(e) => setNotifySize(e.target.value)}
                       >
@@ -697,7 +704,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
               </div>
             )}
 
-            <div className="mt-5 rounded-xl bg-indigo-50 p-4 text-sm text-indigo-800">
+            <div className="mt-5 rounded-xl bg-slate-100 p-4 text-sm text-slate-800">
               <strong>How to measure:</strong> Use a soft measuring tape. Keep it snug but not tight. Chest = fullest part of chest. Waist = narrowest point of torso.
             </div>
           </div>
@@ -758,6 +765,22 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
         )}
       </section>
 
+      {/* ── Review reminder for orders in transit ── */}
+      {user && hasPendingOrder && deliveredItems.length === 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-xl">📦</span>
+            <div>
+              <p className="font-semibold text-amber-900">Your order is on its way!</p>
+              <p className="mt-1 text-sm text-amber-700">
+                Once your order is delivered, you can share your review and help others decide.
+                We&apos;ll remind you by email when it arrives.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Write a review (only if user has delivered order with this product) ── */}
       {user && deliveredItems.length > 0 && !reviewSubmitted && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
@@ -768,7 +791,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
               <div>
                 <label className="text-sm font-medium text-slate-700">Select order item</label>
                 <select
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
                   value={reviewOrderItemId}
                   onChange={(e) => setReviewOrderItemId(e.target.value)}
                 >
@@ -797,7 +820,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
               <label className="text-sm font-medium text-slate-700">Comment (optional)</label>
               <textarea
                 rows={3}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
                 placeholder="Tell others about your experience…"
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}

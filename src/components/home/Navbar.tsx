@@ -15,8 +15,8 @@ export const Navbar = () => (
   >
     <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-8">
       <Link href="/" className="flex items-center gap-3 text-white">
-        <Image src="/logo.png" alt="Disent Clung logo" width={44} height={44} className="h-11 w-11 shrink-0 rounded-md" />
-        <span className="text-xl font-bold tracking-[0.2em]">DISENT CLUNG</span>
+        <Image src="/logo.png" alt="Disent Club logo" width={44} height={44} className="h-11 w-11 shrink-0 rounded-md" />
+        <span className="text-xl font-bold tracking-[0.2em]">DISENT CLUB</span>
       </Link>
 
       <div className="hidden items-center gap-8 md:flex">

@@ -3,7 +3,7 @@ import { Home, ArrowLeft, ShoppingBag, Search } from 'lucide-react'
 import { supportMailtoHref } from '@/constants/support'
 
 export const metadata = {
-  title: '404 — Page Not Found | Disent Clung',
+  title: '404 — Page Not Found | Disent Club',
   description: "Sorry, the page you're looking for doesn't exist.",
 }
 
@@ -23,7 +23,7 @@ export default function NotFound() {
           className="mb-8 flex items-center gap-2 text-sm font-bold tracking-widest uppercase text-indigo-600"
         >
           <ShoppingBag size={18} />
-          Disent Clung
+          Disent Club
         </Link>
 
         {/* 404 display */}

@@ -165,7 +165,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
                 className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition ${
                   isActive
                     ? 'border-emerald-300 bg-emerald-50'
-                    : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50'
+                    : 'border-slate-200 bg-slate-50 hover:border-slate-900 hover:bg-slate-100'
                 } ${compact ? 'text-[11px]' : 'text-xs'}`}
               >
                 <span>
@@ -177,7 +177,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
                     </span>
                   ) : null}
                 </span>
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-slate-900">
                   -Rs. {Math.round(Number(coupon.discountAmount))}
                 </span>
               </button>

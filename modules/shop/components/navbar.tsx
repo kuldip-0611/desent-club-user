@@ -117,7 +117,7 @@ export const Navbar = () => {
             <Menu className="h-5 w-5" />
           </button>
           <Link href="/home" className="flex items-center gap-2">
-            <Image src="/icon.png" alt="Disent Clung logo" width={44} height={44} className="h-11 w-11 shrink-0 rounded-md" />
+            <Image src="/icon.png" alt="Disent Club logo" width={44} height={44} className="h-11 w-11 shrink-0 rounded-md" />
           </Link>
 
           <nav className="hidden items-center gap-6 lg:flex">
@@ -160,7 +160,7 @@ export const Navbar = () => {
               placeholder="Search tees, tracks, hoodies..."
               className={cn(
                 'pl-9',
-                isDark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:border-indigo-400' : '',
+                isDark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:border-slate-900' : '',
               )}
             />
             <AnimatePresence>
@@ -209,7 +209,7 @@ export const Navbar = () => {
                         onClick={() => handleSearchSubmit(search)}
                         className={cn(
                           'flex w-full items-center gap-2 border-t px-4 py-2.5 text-sm font-medium transition-colors',
-                          isDark ? 'border-slate-700 text-indigo-400 hover:bg-slate-800' : 'border-slate-100 text-indigo-600 hover:bg-slate-50',
+                          isDark ? 'border-slate-700 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-900 hover:bg-slate-50',
                         )}
                       >
                         <Search className="h-3.5 w-3.5" />
@@ -246,7 +246,7 @@ export const Navbar = () => {
             >
               <ShoppingBag className="h-5 w-5" />
               {count > 0 ? (
-                <span className="absolute -right-1 -top-1.5 rounded-full bg-indigo-600 px-1.5 text-[10px] text-white">
+                <span className="absolute -right-1 -top-1.5 rounded-full bg-slate-900 px-1.5 text-[10px] text-white">
                   {count}
                 </span>
               ) : null}
@@ -297,7 +297,7 @@ export const Navbar = () => {
                   <div key={cat.id} className={cn('rounded-xl border p-4', isDark ? 'border-slate-800' : 'border-slate-200')}>
                     <Link
                       href={`/products?category=${cat.slug}`}
-                      className={cn('text-sm font-semibold hover:text-indigo-600', isDark ? 'text-slate-100' : 'text-slate-900')}
+                      className={cn('text-sm font-semibold hover:text-slate-600', isDark ? 'text-slate-100' : 'text-slate-900')}
                     >
                       {cat.name}
                     </Link>
@@ -307,7 +307,7 @@ export const Navbar = () => {
                           <li key={sub.id}>
                             <Link
                               href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
-                              className={cn('text-xs hover:text-indigo-600', isDark ? 'text-slate-400' : 'text-slate-600')}
+                              className={cn('text-xs hover:text-slate-600', isDark ? 'text-slate-400' : 'text-slate-600')}
                             >
                               {sub.name}
                             </Link>
@@ -412,8 +412,8 @@ export const Navbar = () => {
                     className={cn(
                       'w-full rounded-lg border pl-9 pr-4 py-2.5 text-sm outline-none transition-colors',
                       isDark
-                        ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500 focus:border-indigo-400'
-                        : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500',
+                        ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500 focus:border-slate-900'
+                        : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-900',
                     )}
                   />
                   {showMobileDropdown && mobileSuggestions.length > 0 && (
@@ -463,14 +463,14 @@ export const Navbar = () => {
                           href={`/products?category=${cat.slug}`}
                           className={cn(
                             'block text-sm font-semibold',
-                            isDark ? 'text-slate-100 hover:text-indigo-400' : 'text-slate-900 hover:text-indigo-600',
+                            isDark ? 'text-slate-100 hover:text-slate-300' : 'text-slate-900 hover:text-slate-600',
                           )}
                           onClick={closeMobile}
                         >
                           {cat.name}
                         </Link>
                         {cat.subcategories.length > 0 ? (
-                          <div className="mt-2 space-y-0.5 border-l-2 border-indigo-500/30 pl-3">
+                          <div className="mt-2 space-y-0.5 border-l-2 border-slate-300 pl-3">
                             {cat.subcategories.map((sub) => (
                               <Link
                                 key={sub.id}
@@ -478,8 +478,8 @@ export const Navbar = () => {
                                 className={cn(
                                   'block rounded-md py-1.5 text-xs',
                                   isDark
-                                    ? 'text-slate-400 hover:text-indigo-400'
-                                    : 'text-slate-600 hover:text-indigo-600',
+                                    ? 'text-slate-400 hover:text-slate-300'
+                                    : 'text-slate-600 hover:text-slate-600',
                                 )}
                                 onClick={closeMobile}
                               >

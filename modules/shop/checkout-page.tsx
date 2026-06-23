@@ -203,7 +203,7 @@ export const CheckoutPageModule = () => {
             type="text"
             inputMode="numeric"
             maxLength={6}
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-xl font-bold tracking-[0.2em] outline-none focus:border-indigo-400"
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-xl font-bold tracking-[0.2em] outline-none focus:border-slate-900"
             placeholder="6-digit OTP"
             value={codOtpInput}
             onChange={(e) => setCodOtpInput(e.target.value.replace(/\D/g, ''))}
@@ -217,7 +217,7 @@ export const CheckoutPageModule = () => {
           </Button>
           <button
             type="button"
-            className="text-sm text-indigo-600 hover:underline"
+            className="text-sm text-slate-900 hover:underline"
             onClick={() => {
               setCodOtpModal(null)
               router.push(`/orders?placed=${codOtpModal.orderId}`)
@@ -250,18 +250,18 @@ export const CheckoutPageModule = () => {
               onClick={() => setPaymentMethod('ONLINE')}
               className={`flex items-start gap-3 rounded-xl border p-4 text-left transition ${
                 paymentMethod === 'ONLINE'
-                  ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-300'
+                  ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-300'
                   : 'border-slate-200 hover:border-slate-300'
               }`}
             >
-              <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${paymentMethod === 'ONLINE' ? 'bg-indigo-100' : 'bg-slate-100'}`}>
-                <CreditCard className={`h-4 w-4 ${paymentMethod === 'ONLINE' ? 'text-indigo-600' : 'text-slate-500'}`} />
+              <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${paymentMethod === 'ONLINE' ? 'bg-slate-900' : 'bg-slate-100'}`}>
+                <CreditCard className={`h-4 w-4 ${paymentMethod === 'ONLINE' ? 'text-white' : 'text-slate-500'}`} />
               </div>
               <div>
-                <p className={`font-semibold ${paymentMethod === 'ONLINE' ? 'text-indigo-900' : 'text-slate-800'}`}>Online Payment</p>
+                <p className={`font-semibold ${paymentMethod === 'ONLINE' ? 'text-slate-900' : 'text-slate-800'}`}>Online Payment</p>
                 <p className="mt-0.5 text-xs text-slate-500">UPI, cards, netbanking via Razorpay</p>
               </div>
-              {paymentMethod === 'ONLINE' && <CheckCircle className="ml-auto h-4 w-4 flex-shrink-0 text-indigo-600" />}
+              {paymentMethod === 'ONLINE' && <CheckCircle className="ml-auto h-4 w-4 flex-shrink-0 text-white" />}
             </button>
 
             <button
@@ -285,7 +285,7 @@ export const CheckoutPageModule = () => {
           </div>
 
           {paymentMethod === 'ONLINE' && (
-            <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-sm text-indigo-900">
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
               Payment processed via Razorpay. UPI, debit/credit card, netbanking all supported.
             </div>
           )}
@@ -418,7 +418,7 @@ export const CheckoutPageModule = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-indigo-400"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-slate-900"
                     placeholder="XXXX-XXXX-XXXX"
                     value={giftCardInput}
                     onChange={(e) => setGiftCardInput(e.target.value.toUpperCase())}
@@ -427,7 +427,7 @@ export const CheckoutPageModule = () => {
                     type="button"
                     disabled={giftCardChecking || !giftCardInput.trim()}
                     onClick={() => void handleCheckGiftCard()}
-                    className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition"
+                    className="rounded-lg border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-50 transition"
                   >
                     {giftCardChecking ? '…' : 'Apply'}
                   </button>
@@ -463,7 +463,7 @@ export const CheckoutPageModule = () => {
               </div>
             )}
             {giftCardToApply > 0 && (
-              <div className="flex justify-between text-indigo-700 font-medium">
+              <div className="flex justify-between text-slate-900 font-medium">
                 <span>🎁 Gift Card</span>
                 <span>−₹{giftCardToApply.toFixed(2)}</span>
               </div>

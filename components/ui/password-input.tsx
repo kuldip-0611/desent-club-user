@@ -5,7 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const defaultInputClass =
-  'h-10 w-full rounded-xl border border-slate-300 bg-white px-3 pr-10 text-sm outline-none ring-indigo-100 transition focus:border-indigo-500 focus:ring-2'
+  'h-10 w-full rounded-xl border border-slate-300 bg-white px-3 pr-10 text-sm outline-none ring-slate-200 transition focus:border-slate-900 focus:ring-2'
 
 type PasswordInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   toggleVariant?: 'default' | 'auth'

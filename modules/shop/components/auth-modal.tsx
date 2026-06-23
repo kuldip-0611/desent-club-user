@@ -178,13 +178,13 @@ export const AuthModal = () => {
         {mode !== 'verify' ? (
           <button
             type="button"
-            className="text-xs font-medium text-indigo-600"
+            className="text-xs font-medium text-slate-900 underline"
             onClick={() => setMode((prev) => (prev === 'login' ? 'register' : 'login'))}
           >
             {mode === 'login' ? 'Need an account?' : 'Have an account?'}
           </button>
         ) : (
-          <button type="button" className="text-xs font-medium text-indigo-600" onClick={() => setMode('login')}>
+          <button type="button" className="text-xs font-medium text-slate-900 underline" onClick={() => setMode('login')}>
             Back to sign in
           </button>
         )}
@@ -220,7 +220,7 @@ export const AuthModal = () => {
             ) : null}
           </div>
           <div className="flex justify-end">
-            <Link href="/forgot-password" className="text-xs font-medium text-indigo-600 hover:underline">
+            <Link href="/forgot-password" className="text-xs font-medium text-slate-900 underline hover:underline">
               Forgot password?
             </Link>
           </div>
@@ -291,7 +291,7 @@ export const AuthModal = () => {
           </Button>
           <button
             type="button"
-            className="w-full text-center text-xs font-medium text-indigo-600"
+            className="w-full text-center text-xs font-medium text-slate-900 underline"
             onClick={handleResendOtp}
             disabled={submitting}
           >

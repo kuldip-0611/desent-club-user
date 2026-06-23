@@ -74,7 +74,7 @@ export const ProfilePageModule = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900">Loyalty Points</h2>
-              <Link href="/loyalty" className="text-xs font-medium text-indigo-600 hover:underline">
+              <Link href="/loyalty" className="text-xs font-medium text-slate-900 hover:underline">
                 View history →
               </Link>
             </div>

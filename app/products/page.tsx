@@ -16,7 +16,7 @@ export async function generateMetadata({ searchParams }: ProductsRouteProps): Pr
     : `${SITE_URL}/products?page=${page}`
 
   return {
-    title: 'Products | Disent Clung',
+    title: 'Products | Disent Club',
     description: 'Browse premium tshirts, tracks, and everyday fashion essentials.',
     alternates: { canonical },
     robots: isFirstPage

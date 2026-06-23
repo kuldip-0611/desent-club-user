@@ -68,6 +68,7 @@ export const listProducts = async (filters: ProductFilters = {}): Promise<Produc
       colors: filters.colors?.join(',') || undefined,
       sizes: filters.sizes?.join(',') || undefined,
       minRating: filters.minRating,
+      ids: filters.ids || undefined,
     },
   })
   return { ...data, items: data.items.map(normalizeProduct) }

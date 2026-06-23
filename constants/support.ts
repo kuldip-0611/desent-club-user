@@ -11,7 +11,7 @@ export const SUPPORT_PHONE_DISPLAY =
 
 export const SUPPORT_WHATSAPP_MESSAGE =
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_MESSAGE ??
-  'Hi, I need help with my Disent Clung order.'
+  'Hi, I need help with my Disent Club order.'
 
 export const supportMailtoHref = `mailto:${SUPPORT_EMAIL}`
 

@@ -10,8 +10,8 @@ export const Footer = () => (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Disent Clung logo" width={30} height={30} className="rounded-md" />
-          <p className="text-lg font-semibold tracking-[0.15em] text-white">DISENT CLUNG</p>
+          <Image src="/logo.png" alt="Disent Club logo" width={30} height={30} className="rounded-md" />
+          <p className="text-lg font-semibold tracking-[0.15em] text-white">DISENT CLUB</p>
         </div>
         <p className="mt-1 text-sm text-white/60">Premium athleisure for modern wardrobes.</p>
       </div>

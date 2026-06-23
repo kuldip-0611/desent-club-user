@@ -40,6 +40,8 @@ export const AddressesPanel = ({
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<AddressFormValues>(emptyAddressForm())
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadAddresses = useCallback(async () => {
     if (!isAuthenticated) return
@@ -125,17 +127,21 @@ export const AddressesPanel = ({
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this address?')) return
+  const handleDelete = async () => {
+    if (!deleteConfirmId) return
+    setDeleting(true)
     try {
-      await deleteMyAddress(id)
-      if (selectedAddressId === id) {
+      await deleteMyAddress(deleteConfirmId)
+      if (selectedAddressId === deleteConfirmId) {
         setSelectedAddressId(null)
       }
       toast.success('Address removed')
+      setDeleteConfirmId(null)
       await loadAddresses()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not delete address')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -188,7 +194,7 @@ export const AddressesPanel = ({
                 key={address.id}
                 className={`rounded-xl border p-3 transition ${
                   isSelected
-                    ? 'border-indigo-400 bg-indigo-50/60 ring-1 ring-indigo-200'
+                    ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-300'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
@@ -224,7 +230,7 @@ export const AddressesPanel = ({
                   {mode === 'checkout' ? (
                     <button
                       type="button"
-                      className="text-xs font-medium text-indigo-600 hover:underline"
+                      className="text-xs font-medium text-slate-700 hover:underline"
                       onClick={() => {
                         setSelectedAddressId(address.id)
                         startEdit(address)
@@ -235,7 +241,7 @@ export const AddressesPanel = ({
                   ) : (
                     <button
                       type="button"
-                      className="text-xs font-medium text-indigo-600 hover:underline"
+                      className="text-xs font-medium text-slate-700 hover:underline"
                       onClick={() => startEdit(address)}
                     >
                       Edit
@@ -253,7 +259,7 @@ export const AddressesPanel = ({
                   <button
                     type="button"
                     className="text-xs font-medium text-rose-600 hover:underline"
-                    onClick={() => void handleDelete(address.id)}
+                    onClick={() => setDeleteConfirmId(address.id)}
                   >
                     Delete
                   </button>
@@ -274,6 +280,38 @@ export const AddressesPanel = ({
           {' · '}
           {selectedAddress.pincode}
         </p>
+      ) : null}
+
+      {deleteConfirmId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-rose-100">
+              <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="mt-3 text-base font-semibold text-slate-900">Delete address?</h3>
+            <p className="mt-1 text-sm text-slate-500">This address will be permanently removed and cannot be recovered.</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-60"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {showForm ? (

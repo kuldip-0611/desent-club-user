@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { StoreShell } from '@/modules/shop/components/store-shell'
 import { OrdersPageModule } from '@/modules/shop/orders-page'

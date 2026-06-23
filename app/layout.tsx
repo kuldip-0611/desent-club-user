@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Disent Clung',
+  title: 'Disent Club',
   description: 'Premium ecommerce clothing experience',
   icons: {
     icon: '/logo.png',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Disent Clung',
+    title: 'Disent Club',
   },
 };
 

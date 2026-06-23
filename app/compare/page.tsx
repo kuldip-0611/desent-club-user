@@ -1,6 +1,7 @@
-'use client';
+'use client'
+export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,6 +17,10 @@ const AUDIENCE_LABEL: Record<string, string> = {
 }
 
 export default function ComparePage() {
+  return <Suspense><ComparePageInner /></Suspense>
+}
+
+function ComparePageInner() {
   const params = useSearchParams();
   const ids = useMemo(() => (params.get('ids') ?? '').split(',').filter(Boolean).slice(0, 3), [params]);
   const [products, setProducts] = useState<Product[]>([]);

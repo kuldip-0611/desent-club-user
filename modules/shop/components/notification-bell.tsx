@@ -121,10 +121,10 @@ export const NotificationBell = ({ isDark }: { isDark?: boolean }) => {
             )}
           >
             <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-indigo-500" />
+              <Bell className="h-4 w-4 text-slate-700" />
               <span className="text-sm font-bold">Notifications</span>
               {unreadCount > 0 && (
-                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-600">
+                <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white">
                   {unreadCount} new
                 </span>
               )}
@@ -140,7 +140,7 @@ export const NotificationBell = ({ isDark }: { isDark?: boolean }) => {
                     isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100',
                   )}
                 >
-                  <CheckCheck className="h-4 w-4 text-indigo-500" />
+                  <CheckCheck className="h-4 w-4 text-slate-700" />
                 </button>
               )}
               <button
@@ -171,16 +171,16 @@ export const NotificationBell = ({ isDark }: { isDark?: boolean }) => {
                   className={cn(
                     'group flex items-start gap-3 border-b px-4 py-3 transition-colors',
                     isDark ? 'border-slate-800 hover:bg-slate-800/50' : 'border-slate-50 hover:bg-slate-50',
-                    !n.isRead && (isDark ? 'bg-indigo-950/30' : 'bg-indigo-50/50'),
+                    !n.isRead && (isDark ? 'bg-slate-800/50' : 'bg-slate-50'),
                   )}
                 >
                   {/* Icon */}
-                  <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-base">
+                  <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-base">
                     {TYPE_ICON[n.type] ?? '🔔'}
                   </span>
                   {/* Content */}
                   <div className="min-w-0 flex-1" onClick={() => !n.isRead && readMutation.mutate(n.id)}>
-                    <p className={cn('text-sm font-semibold leading-snug', !n.isRead && 'text-indigo-700 dark:text-indigo-300')}>
+                    <p className={cn('text-sm font-semibold leading-snug', !n.isRead && 'text-slate-900 dark:text-white')}>
                       {n.title}
                     </p>
                     <p className={cn('mt-0.5 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>{n.body}</p>
@@ -193,9 +193,9 @@ export const NotificationBell = ({ isDark }: { isDark?: boolean }) => {
                         type="button"
                         title="Mark read"
                         onClick={() => readMutation.mutate(n.id)}
-                        className="rounded p-1 hover:bg-indigo-100"
+                        className="rounded p-1 hover:bg-slate-100"
                       >
-                        <Check className="h-3 w-3 text-indigo-600" />
+                        <Check className="h-3 w-3 text-slate-700" />
                       </button>
                     )}
                     <button
@@ -208,7 +208,7 @@ export const NotificationBell = ({ isDark }: { isDark?: boolean }) => {
                     </button>
                   </div>
                   {!n.isRead && (
-                    <span className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-indigo-500" />
+                    <span className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-slate-900" />
                   )}
                 </div>
               ))

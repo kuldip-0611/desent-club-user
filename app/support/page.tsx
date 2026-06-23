@@ -10,8 +10,8 @@ import {
 import { SITE_URL } from '@/constants/site'
 
 export const metadata: Metadata = {
-  title: 'Help & Support — Disent Clung',
-  description: 'Contact Disent Clung support. Get help with orders, returns, payments and more.',
+  title: 'Help & Support — Disent Club',
+  description: 'Contact Disent Club support. Get help with orders, returns, payments and more.',
   alternates: { canonical: `${SITE_URL}/support` },
 }
 

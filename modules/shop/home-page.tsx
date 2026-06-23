@@ -46,7 +46,7 @@ export const HomePageModule = () => {
             <Link
               key={item.id}
               href={`/products?category=${item.slug}`}
-              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-md"
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white hover:border-slate-400 hover:shadow-md"
             >
               {item.image ? (
                 <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
@@ -76,7 +76,7 @@ export const HomePageModule = () => {
       <section>
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Best sellers</h2>
-          <Link href="/products" className="text-sm font-semibold text-indigo-600">
+          <Link href="/products" className="text-sm font-semibold text-slate-900 underline">
             View all
           </Link>
         </div>

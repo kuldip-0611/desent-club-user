@@ -38,7 +38,7 @@ export default function ReferralPage() {
     const link = `${window.location.origin}/register?ref=${stats.code}`;
     if (navigator.share) {
       await navigator.share({
-        title: 'Join Disent Clung',
+        title: 'Join Disent Club',
         text: `Use my referral code ${stats.code} and get bonus loyalty points on your first order!`,
         url: link,
       });
