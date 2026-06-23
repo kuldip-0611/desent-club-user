@@ -149,7 +149,7 @@ function CancelOrderModal({
   }
 
   return (
-    <div className="w-full rounded-2xl border border-red-100 bg-white p-5 shadow-sm">
+    <div className="w-full rounded-2xl border border-red-100 bg-white p-5 shadow-sm dark:border-red-900/40 dark:bg-slate-900">
       {/* Header */}
       <div className="mb-4 flex items-start gap-3">
         <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-sm text-red-600">✕</span>
@@ -570,7 +570,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
   if (!user) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           <p className="text-sm text-slate-500">Sign in to view order details.</p>
           <Button className="mt-3" onClick={() => requireAuth(() => router.push(`/orders/${orderId}`))}>
             Sign in
@@ -596,7 +596,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Link href="/orders" className="text-sm text-slate-700 hover:underline">
+          <Link href="/orders" className="text-sm text-slate-700 hover:underline dark:text-slate-300">
             ← Back to orders
           </Link>
           <h1 className="mt-1 text-2xl font-bold">Order #{order.id.slice(0, 8)}</h1>
@@ -610,14 +610,12 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       </div>
 
       {order.status !== 'CANCELLED' && order.status !== 'REFUNDED' && order.status !== 'PENDING' ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="mb-5 text-sm font-semibold text-slate-700">Order progress</p>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+          <p className="mb-5 text-sm font-semibold text-slate-700 dark:text-slate-200">Order progress</p>
           <div className="relative flex items-start justify-between">
-            {/* Background connector line */}
-            <div className="absolute left-0 right-0 top-4 h-0.5 bg-slate-200" aria-hidden="true" />
-            {/* Filled connector — grows with progress */}
+            <div className="absolute left-0 right-0 top-4 h-0.5 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
             <div
-              className="absolute left-0 top-4 h-0.5 bg-slate-900 transition-all duration-500"
+              className="absolute left-0 top-4 h-0.5 bg-slate-900 transition-all duration-500 dark:bg-white"
               style={{ width: `${(currentStep / (ORDER_TIMELINE.length - 1)) * 100}%` }}
               aria-hidden="true"
             />
@@ -630,9 +628,9 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-bold shadow-sm transition-all duration-300 ${
                       done
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-400'
-                    } ${active ? 'ring-4 ring-slate-200' : ''}`}
+                        ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                        : 'border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500'
+                    } ${active ? 'ring-4 ring-slate-200 dark:ring-slate-600' : ''}`}
                   >
                     {done ? <span>{icons[index]}</span> : <span className="text-xs">{index + 1}</span>}
                   </div>
@@ -652,7 +650,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
 
       {/* ── Shipment tracking ───────────────────────────────────────── */}
       {['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status) ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <p className="font-semibold">Shipment &amp; tracking</p>
             {!trackingLoading && (
@@ -689,7 +687,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                       href={tracking.trackingUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+                      className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                     >
                       Track on Shiprocket ↗
                     </a>
@@ -705,10 +703,10 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                           <p className="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                             Activity log
                           </p>
-                          <ol className="relative border-l border-slate-200 pl-4">
+                          <ol className="relative border-l border-slate-200 pl-4 dark:border-slate-700">
                             {activities.slice(0, 6).map((act, i) => (
                               <li key={i} className="mb-3 ml-1">
-                                <div className="absolute -left-1.5 h-3 w-3 rounded-full bg-slate-900" />
+                                <div className="absolute -left-1.5 h-3 w-3 rounded-full bg-slate-900 dark:bg-white" />
                                 <p className="font-medium text-slate-800">{act.activity}</p>
                                 <p className="text-xs text-slate-500">
                                   {act.location} · {act.date}
@@ -807,7 +805,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       ) : null}
 
       {address ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm dark:border-slate-700 dark:bg-slate-900">
           <p className="font-semibold">Delivery address</p>
           <p className="mt-2 text-slate-600">
             {address.fullName} · {address.phone}
@@ -820,7 +818,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <p className="mb-3 font-semibold">Items</p>
         <ul className="space-y-3">
           {order.items.map((item) => (
@@ -844,7 +842,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
             </li>
           ))}
         </ul>
-        <div className="mt-4 space-y-1 border-t border-slate-100 pt-3 text-sm text-slate-600">
+        <div className="mt-4 space-y-1 border-t border-slate-100 pt-3 text-sm text-slate-600 dark:border-slate-700">
           <p>Subtotal: Rs. {order.subtotal}</p>
           {Number(order.discountAmount) > 0 ? <p>Discount: -Rs. {order.discountAmount}</p> : null}
           <p className="font-bold text-slate-900">Total: Rs. {order.total}</p>
@@ -855,11 +853,11 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       </section>
 
       {order.reviews && order.reviews.length > 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           <p className="mb-3 font-semibold">Your reviews</p>
           <ul className="space-y-3">
             {order.reviews.map((review) => (
-              <li key={review.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+              <li key={review.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
                 <p className="font-medium">{review.product.name}</p>
                 <p className="text-amber-600">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</p>
                 {review.comment ? <p className="mt-1 text-slate-600">{review.comment}</p> : null}
@@ -870,12 +868,12 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       ) : null}
 
       {order.actions?.canReview && unreviewedItems.length > 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/50">
           <p className="font-semibold text-slate-900">Rate your purchase</p>
           <p className="mt-1 text-sm text-slate-600">Share your experience — it helps other shoppers.</p>
           <div className="mt-4 space-y-4">
             {unreviewedItems.map((item) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-600 dark:bg-slate-900">
                 <p className="text-sm font-medium">{item.product.name}</p>
                 <div className="mt-2 flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -916,7 +914,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
 
       {/* ── NPS Survey (shown for DELIVERED orders) ── */}
       {order.status === 'DELIVERED' && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           {npsSubmitted ? (
             <p className="text-sm font-medium text-emerald-700">
               Thank you for your feedback! It helps us improve.
@@ -938,7 +936,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                           : score >= 7
                             ? 'border-slate-900 bg-slate-900 text-white'
                             : 'border-red-500 bg-red-500 text-white'
-                        : 'border-slate-200 text-slate-700 hover:border-slate-400'
+                        : 'border-slate-200 text-slate-700 hover:border-slate-400 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-400'
                     }`}
                   >
                     {score}
@@ -979,7 +977,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               setInvoiceLoading(false)
             }
           }}
-          className="flex items-center gap-2 rounded-xl border border-slate-900 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-900 hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 rounded-xl border border-slate-900 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white dark:bg-slate-900 dark:text-white dark:hover:bg-white dark:hover:text-slate-900"
         >
           <FileDown className={`h-4 w-4 ${invoiceLoading ? 'animate-bounce' : ''}`} />
           {invoiceLoading ? 'Downloading…' : 'Download Invoice'}
@@ -1004,7 +1002,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
 
         {order.actions?.canReturn ? (
           showReturn ? (
-            <div className="w-full rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
               {/* ── Step: choose return or exchange ── */}
               {returnStep === 'choose' && (
                 <>
@@ -1231,7 +1229,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
 
       {/* ── Similar Products (shown after return submitted) ── */}
       {similarProducts.length > 0 && (
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
           <p className="text-sm font-semibold text-slate-800">You might also like</p>
           <p className="mt-0.5 text-xs text-slate-500">
             Shop similar products — your store credit will be applied automatically at checkout.

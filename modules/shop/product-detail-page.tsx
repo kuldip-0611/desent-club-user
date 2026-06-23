@@ -300,7 +300,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
       <section className="grid gap-8 lg:grid-cols-2">
         {/* ── Image gallery ── */}
         <div className="space-y-3">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-slate-200 bg-white">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
             <Image
               src={displayImages[activeImage] ?? displayImages[0]}
               alt={product.name}
@@ -310,23 +310,25 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
             {/* Zoom icon */}
             <button
               onClick={() => openLightbox(activeImage)}
-              className="absolute right-3 top-3 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white"
+              className="absolute right-3 top-3 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white dark:bg-slate-800/90 dark:hover:bg-slate-700"
               aria-label="Zoom image"
             >
-              <ZoomIn className="h-4 w-4 text-slate-700" />
+              <ZoomIn className="h-4 w-4 text-slate-700 dark:!text-white" />
             </button>
             {/* Prev / Next arrows */}
             {displayImages.length > 1 && (
               <>
                 <button
                   onClick={() => setActiveImage((i) => (i - 1 + displayImages.length) % displayImages.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
+                  aria-label="Previous image"
                 >
                   <ChevronLeft className="h-4 w-4 text-slate-900 dark:text-white" />
                 </button>
                 <button
                   onClick={() => setActiveImage((i) => (i + 1) % displayImages.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
+                  aria-label="Next image"
                 >
                   <ChevronRight className="h-4 w-4 text-slate-900 dark:text-white" />
                 </button>
@@ -337,7 +339,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
             {displayImages.map((img, idx) => (
               <button
                 key={img}
-                className={`relative aspect-square overflow-hidden rounded-xl border ${idx === activeImage ? 'border-slate-900' : 'border-slate-200'}`}
+                className={`relative aspect-square overflow-hidden rounded-xl border ${idx === activeImage ? 'border-slate-900 dark:border-white' : 'border-slate-200 dark:border-slate-600'}`}
                 onClick={() => setActiveImage(idx)}
               >
                 <Image src={img} alt={`${product.name} ${idx + 1}`} fill className="object-cover" />
@@ -503,7 +505,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
 
           {/* ── Bundle Banner ── */}
           {activeBundle && (
-            <div className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-800">
+            <div className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
               🎁{' '}
               <strong>
                 Buy {activeBundle.minItems}+ items from this collection — get{' '}
@@ -544,7 +546,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
 
           {/* ── Notify Me When Available ── */}
           {isOutOfStock && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
               {notifySuccess ? (
                 <p className="text-sm font-medium text-emerald-700">
                   ✅ We&apos;ll notify you when it&apos;s back in stock!
@@ -558,14 +560,14 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                   <div className="mt-3 space-y-2">
                     <input
                       type="email"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-white"
                       placeholder="your@email.com"
                       value={notifyEmail}
                       onChange={(e) => setNotifyEmail(e.target.value)}
                     />
                     {product.variants.length > 0 && (
                       <select
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-white"
                         value={notifySize}
                         onChange={(e) => setNotifySize(e.target.value)}
                       >
@@ -712,7 +714,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
       )}
 
       {/* ── Reviews ── */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-900">
         <h2 className="text-xl font-bold">Customer reviews</h2>
 
         {reviewsLoading ? (
@@ -783,7 +785,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
 
       {/* ── Write a review (only if user has delivered order with this product) ── */}
       {user && deliveredItems.length > 0 && !reviewSubmitted && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-900">
           <h2 className="text-xl font-bold">Write a Review</h2>
           <p className="mt-1 text-sm text-slate-500">Share your experience with this product.</p>
           <div className="mt-4 space-y-4">

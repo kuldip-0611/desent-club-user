@@ -297,6 +297,7 @@ export const Navbar = () => {
                   <div key={cat.id} className={cn('rounded-xl border p-4', isDark ? 'border-slate-800' : 'border-slate-200')}>
                     <Link
                       href={`/products?category=${cat.slug}`}
+                      onClick={() => setMegaMenuOpen(false)}
                       className={cn('text-sm font-semibold hover:text-slate-600', isDark ? 'text-slate-100' : 'text-slate-900')}
                     >
                       {cat.name}
@@ -307,6 +308,7 @@ export const Navbar = () => {
                           <li key={sub.id}>
                             <Link
                               href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
+                              onClick={() => setMegaMenuOpen(false)}
                               className={cn('text-xs hover:text-slate-600', isDark ? 'text-slate-400' : 'text-slate-600')}
                             >
                               {sub.name}
@@ -323,6 +325,7 @@ export const Navbar = () => {
                 ))}
                 <Link
                   href="/products?audience=MEN"
+                  onClick={() => setMegaMenuOpen(false)}
                   className={cn('rounded-xl border p-4', isDark ? 'border-slate-800 hover:bg-slate-900' : 'border-slate-200 hover:bg-slate-50')}
                 >
                   <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>Men</p>
@@ -332,6 +335,7 @@ export const Navbar = () => {
                 </Link>
                 <Link
                   href="/products?audience=WOMEN"
+                  onClick={() => setMegaMenuOpen(false)}
                   className={cn('rounded-xl border p-4', isDark ? 'border-slate-800 hover:bg-slate-900' : 'border-slate-200 hover:bg-slate-50')}
                 >
                   <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>Women</p>

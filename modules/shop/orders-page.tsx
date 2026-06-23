@@ -43,7 +43,7 @@ export const OrdersPageModule = () => {
   if (!isAuthReady) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">
           Loading orders…
         </div>
       </main>
@@ -53,7 +53,7 @@ export const OrdersPageModule = () => {
   if (!user) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           <h1 className="text-xl font-semibold">Orders</h1>
           <p className="mt-2 text-sm text-slate-500">Please login to access order history.</p>
           <Button className="mt-3" onClick={() => requireAuth(() => {})}>
@@ -69,11 +69,11 @@ export const OrdersPageModule = () => {
       <h1 className="mb-3 text-2xl font-bold">Orders</h1>
 
       {loading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">
           Loading orders…
         </div>
       ) : orders.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-500">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-500 dark:border-slate-600 dark:bg-slate-900">
           No orders yet. Place your first order from checkout.
         </div>
       ) : (
@@ -83,7 +83,7 @@ export const OrdersPageModule = () => {
             return (
               <article
                 key={order.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5"
+                className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -129,7 +129,7 @@ export const OrdersPageModule = () => {
                   ))}
                 </ul>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm dark:border-slate-700">
                   <span className="text-slate-500">
                     Payment: {order.payment?.status === 'PAID' ? 'Paid' : 'Pending'}
                   </span>
@@ -137,7 +137,7 @@ export const OrdersPageModule = () => {
                     <span className="font-bold">Rs. {order.total}</span>
                     <Link
                       href={`/orders/${order.id}`}
-                      className="rounded-lg border border-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-slate-900 hover:text-white"
+                      className="rounded-lg border border-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-slate-900"
                     >
                       View details
                     </Link>

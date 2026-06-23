@@ -25,6 +25,40 @@ type ProductsPageModuleProps = {
   initialSubcategory?: string
 }
 
+type ProductFilters = {
+  category: string
+  subcategory: string
+  audience: string
+}
+
+const buildProductsFilterQuery = ({ category, subcategory, audience }: ProductFilters) => {
+  const params = new URLSearchParams()
+  const normalizedCategory = category.trim()
+  const normalizedSubcategory = subcategory.trim().toLowerCase()
+  const normalizedAudience = audience.trim()
+
+  if (normalizedCategory && normalizedCategory !== 'all') {
+    params.set('category', normalizedCategory)
+  }
+  if (normalizedSubcategory) {
+    params.set('subcategory', normalizedSubcategory)
+  }
+  if (normalizedAudience && normalizedAudience !== 'all') {
+    params.set('audience', normalizedAudience)
+  }
+
+  return params.toString()
+}
+
+const readProductFilters = (
+  searchParams: URLSearchParams,
+  fallback: ProductFilters,
+): ProductFilters => ({
+  category: searchParams.get('category') ?? fallback.category,
+  subcategory: (searchParams.get('subcategory') ?? fallback.subcategory).trim().toLowerCase(),
+  audience: searchParams.get('audience') ?? fallback.audience,
+})
+
 const COLOR_SWATCHES: Record<string, string> = {
   black: '#111827', white: '#f8fafc', navy: '#1e3a8a', charcoal: '#334155',
   olive: '#4d7c0f', maroon: '#7f1d1d', 'sky blue': '#0284c7', beige: '#d6d3d1',
@@ -41,9 +75,29 @@ export const ProductsPageModule = ({
   const router = useRouter()
   const searchParams = useSearchParams()
   const openModal = useUiStore((s) => s.openModal)
-  const [category, setCategory] = useState(initialCategory)
-  const [subcategory, setSubcategory] = useState(initialSubcategory)
-  const [audience, setAudience] = useState(initialAudience)
+  const fallbackFilters = useMemo<ProductFilters>(
+    () => ({
+      category: initialCategory,
+      subcategory: initialSubcategory.trim().toLowerCase(),
+      audience: initialAudience,
+    }),
+    [initialCategory, initialAudience, initialSubcategory],
+  )
+  const { category, subcategory, audience } = useMemo(
+    () => readProductFilters(searchParams, fallbackFilters),
+    [searchParams, fallbackFilters],
+  )
+  const updateProductFilters = (updates: Partial<ProductFilters>) => {
+    const next = {
+      category: updates.category ?? category,
+      subcategory: updates.subcategory ?? subcategory,
+      audience: updates.audience ?? audience,
+    }
+    const qs = buildProductsFilterQuery(next)
+    const current = buildProductsFilterQuery({ category, subcategory, audience })
+    if (qs === current) return
+    router.replace(qs ? `/products?${qs}` : '/products', { scroll: false })
+  }
   const [sort, setSort] = useState<'featured' | 'price-low' | 'price-high' | 'rating'>('featured')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
@@ -58,23 +112,6 @@ export const ProductsPageModule = ({
   const [priceMin, setPriceMin] = useState<number | undefined>(undefined)
   const [priceMax, setPriceMax] = useState<number | undefined>(undefined)
   const [minRating, setMinRating] = useState<number | undefined>(undefined)
-
-  useEffect(() => {
-    setCategory(initialCategory)
-    setSubcategory(initialSubcategory)
-    setAudience(initialAudience)
-  }, [initialCategory, initialSubcategory, initialAudience])
-
-  useEffect(() => {
-    const params = new URLSearchParams()
-    if (category && category !== 'all') params.set('category', category)
-    if (subcategory.trim()) params.set('subcategory', subcategory.trim())
-    if (audience && audience !== 'all') params.set('audience', audience)
-    const qs = params.toString()
-    const next = qs ? `/products?${qs}` : '/products'
-    const current = searchParams.toString() ? `/products?${searchParams.toString()}` : '/products'
-    if (next !== current) router.replace(next, { scroll: false })
-  }, [category, subcategory, audience, router, searchParams])
 
   // Fetch filter options once
   useEffect(() => {
@@ -152,18 +189,18 @@ export const ProductsPageModule = ({
           </button>
           <select
             value={category}
-            onChange={(e) => { setCategory(e.target.value); setSubcategory('') }}
-            className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+            onChange={(e) => updateProductFilters({ category: e.target.value, subcategory: '' })}
+            className="h-10 rounded-xl border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
           >
             <option value="all">All categories</option>
             {categories.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}
           </select>
-          <select value={audience} onChange={(e) => setAudience(e.target.value)} className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+          <select value={audience} onChange={(e) => updateProductFilters({ audience: e.target.value })} className="h-10 rounded-xl border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
             <option value="all">All shoppers</option>
             <option value="MEN">Men</option>
             <option value="WOMEN">Women</option>
           </select>
-          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-10 rounded-xl border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
             <option value="featured">Featured</option>
             <option value="price-low">Price: low to high</option>
             <option value="price-high">Price: high to low</option>
@@ -178,7 +215,7 @@ export const ProductsPageModule = ({
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</span>
           <button
             type="button"
-            onClick={() => setSubcategory('')}
+            onClick={() => updateProductFilters({ subcategory: '' })}
             className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${!subcategory.trim() ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
           >
             All
@@ -187,7 +224,7 @@ export const ProductsPageModule = ({
             <button
               key={s.id}
               type="button"
-              onClick={() => setSubcategory(s.slug)}
+              onClick={() => updateProductFilters({ subcategory: s.slug })}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${subcategory.trim().toLowerCase() === s.slug.toLowerCase() ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
             >
               {s.name}

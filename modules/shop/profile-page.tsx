@@ -47,7 +47,7 @@ export const ProfilePageModule = () => {
       <h1 className="text-2xl font-bold">Profile</h1>
 
       {!user ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           <p className="text-sm text-slate-600">Sign in to view profile, addresses, and notifications.</p>
           <Button className="mt-3" onClick={() => requireAuth(() => {})}>
             Sign in
@@ -56,7 +56,7 @@ export const ProfilePageModule = () => {
       ) : (
         <>
           {/* ── User info ── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
             <p className="font-semibold">{user.name}</p>
             <p className="text-sm text-slate-500">{user.email}</p>
             {user.isVerified ? (
@@ -71,7 +71,7 @@ export const ProfilePageModule = () => {
           </div>
 
           {/* ── Loyalty Points ── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900">Loyalty Points</h2>
               <Link href="/loyalty" className="text-xs font-medium text-slate-900 hover:underline">
@@ -108,7 +108,7 @@ export const ProfilePageModule = () => {
           </div>
 
           {/* ── Your Coupons ── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900">Your Coupons</h2>
               <span className="text-xs text-slate-500">{coupons.length} available</span>
@@ -143,7 +143,7 @@ export const ProfilePageModule = () => {
           </div>
 
           {/* ── Addresses ── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
             <AddressesPanel mode="profile" isAuthenticated />
           </div>
         </>

@@ -186,7 +186,7 @@ export const CheckoutPageModule = () => {
     {/* COD OTP Modal */}
     {codOtpModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl text-center space-y-4">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl space-y-4 dark:bg-slate-900">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 mx-auto">
             <Banknote className="h-7 w-7 text-emerald-600" />
           </div>
@@ -229,7 +229,7 @@ export const CheckoutPageModule = () => {
       </div>
     )}
     <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px] sm:px-6">
-      <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <div>
           <h1 className="text-2xl font-bold">Checkout</h1>
           <p className="mt-1 text-sm text-slate-500">Choose your delivery address and payment method.</p>
@@ -300,7 +300,7 @@ export const CheckoutPageModule = () => {
       <aside className="h-fit space-y-3">
         {/* ── Savings & Loyalty panel — always visible when logged in ── */}
         {user && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-700">Rewards & Savings</p>
               {loyaltyLoading && (
@@ -438,7 +438,7 @@ export const CheckoutPageModule = () => {
         )}
 
         {/* ── Order summary ── */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
           <p className="text-lg font-semibold">Order summary</p>
           <div className="mt-2 space-y-1 text-sm text-slate-600">
             <div className="flex justify-between"><span>Subtotal</span><span>₹{summary.subtotal}</span></div>

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(html[data-theme='dark'], html[data-theme='dark'] *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -42,9 +44,18 @@ html[data-theme='dark'] .bg-slate-100 {
   background-color: #111827 !important;
 }
 
+html[data-theme='dark'] .bg-slate-200 {
+  background-color: #1f2937 !important;
+}
+
+html[data-theme='dark'] .border-slate-100,
 html[data-theme='dark'] .border-slate-200,
 html[data-theme='dark'] .border-slate-300 {
   border-color: #1f2937 !important;
+}
+
+html[data-theme='dark'] .border-slate-900 {
+  border-color: #e2e8f0 !important;
 }
 
 html[data-theme='dark'] .text-slate-900 {
@@ -68,4 +79,33 @@ html[data-theme='dark'] .hover\:bg-slate-50:hover {
 
 html[data-theme='dark'] .hover\:bg-slate-100:hover {
   background-color: #111827 !important;
+}
+
+html[data-theme='dark'] .hover\:bg-slate-900:hover {
+  background-color: #f8fafc !important;
+}
+
+html[data-theme='dark'] .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+html[data-theme='dark'] .hover\:border-slate-900:hover {
+  border-color: #f8fafc !important;
+}
+
+html[data-theme='dark'] .ring-slate-200 {
+  --tw-ring-color: rgb(51 65 85) !important;
+}
+
+html[data-theme='dark'] input:not([type='checkbox']):not([type='radio']),
+html[data-theme='dark'] textarea,
+html[data-theme='dark'] select {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder {
+  color: #64748b;
 }
