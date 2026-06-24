@@ -1,82 +1,61 @@
-'use client'
-export const dynamic = 'force-dynamic'
+import type { Metadata } from 'next'
+import { Suspense } from 'react'
+import { SITE_URL } from '@/constants/site'
+import { SharedWishlistClient } from './SharedWishlistClient'
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { listProducts } from '@/services/product.service';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/+$/, '')
 
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  price: number;
-  images: string[];
+type Props = { searchParams: Promise<{ ids?: string }> }
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { ids: rawIds } = await searchParams
+  const ids = (rawIds ?? '').split(',').filter(Boolean)
+
+  const title = 'Shared Wishlist | Disent Club'
+  const description = 'Check out these picks from a Disent Club wishlist — premium streetwear & essentials.'
+  let image = `${SITE_URL}/og-image.jpg`
+
+  if (ids.length > 0) {
+    try {
+      const res = await fetch(`${API_URL}/shop/products?ids=${ids.join(',')}&limit=1`, {
+        next: { revalidate: 3600 },
+      })
+      if (res.ok) {
+        const data = await res.json() as { items?: { images?: string[] }[] }
+        const firstImage = data.items?.[0]?.images?.[0]
+        if (firstImage) {
+          const ogParams = new URLSearchParams({ title: 'Shared Wishlist', subtitle: 'Disent Club picks', image: firstImage })
+          image = `${SITE_URL}/api/og?${ogParams.toString()}`
+        }
+      }
+    } catch {
+      // fallback to default OG image
+    }
+  }
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}/wishlist/shared`,
+      images: [{ url: image, width: 800, height: 1000, alt: 'Disent Club Wishlist' }],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
+  }
 }
 
 export default function SharedWishlistPage() {
-  return <Suspense><SharedWishlistPageInner /></Suspense>
-}
-
-function SharedWishlistPageInner() {
-  const params = useSearchParams();
-  const ids = useMemo(() => (params.get('ids') ?? '').split(',').filter(Boolean), [params]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!ids.length) { setLoading(false); return; }
-    listProducts({ ids: ids.join(','), limit: ids.length })
-      .then((res) => setProducts((res.items ?? []) as Product[]))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [ids]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
-      </div>
-    );
-  }
-
   return (
-    <section className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-bold text-slate-900">Shared Wishlist</h1>
-        <p className="mt-1 text-sm text-slate-500">Someone shared their Disent Club wishlist with you</p>
-
-        {products.length === 0 ? (
-          <div className="mt-10 text-center text-slate-400">No products found</div>
-        ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => (
-              <Link
-                key={product.id}
-                href={`/products/${product.slug}`}
-                className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-              >
-                <div className="relative aspect-square overflow-hidden bg-slate-100">
-                  {product.images[0] && (
-                    <Image
-                      src={product.images[0]}
-                      alt={product.name}
-                      fill
-                      className="object-cover transition group-hover:scale-105"
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                    />
-                  )}
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-2 text-sm font-medium text-slate-800">{product.name}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">₹{product.price.toLocaleString()}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
+    <Suspense>
+      <SharedWishlistClient />
+    </Suspense>
+  )
 }

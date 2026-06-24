@@ -63,6 +63,7 @@ export type OrderItem = {
   product: {
     id: string
     name: string
+    slug: string | null
     images: { path: string }[]
   }
 }

@@ -14,9 +14,18 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const SITE_NAME = 'Disent Club'
+const SITE_DESC = 'Premium streetwear & essentials — tees, hoodies, tracks and more. Free shipping on orders ₹999+.'
+// S3-hosted image — direct URL, no proxy or dynamic generation needed
+const OG_IMAGE = 'https://desent-club-dev-assets-382720393179-ap-southeast-2-an.s3.ap-southeast-2.amazonaws.com/categories/585808214a46.jpg'
+
 export const metadata: Metadata = {
-  title: 'Disent Club',
-  description: 'Premium ecommerce clothing experience',
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESC,
+  metadataBase: new URL(SITE_URL),
   icons: {
     icon: '/logo.png',
     shortcut: '/logo.png',
@@ -27,7 +36,28 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Disent Club',
+    title: SITE_NAME,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESC,
+    url: SITE_URL,
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: 'Disent Club — Premium Streetwear',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_NAME,
+    description: SITE_DESC,
+    images: [OG_IMAGE],
   },
 };
 

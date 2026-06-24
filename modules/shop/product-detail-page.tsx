@@ -290,7 +290,60 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
   }
 
   if (isLoading || !product) {
-    return <div className="mx-auto max-w-7xl px-4 py-10 text-sm text-slate-500">Loading product...</div>
+    return (
+      <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6">
+        <section className="grid gap-8 lg:grid-cols-2">
+          {/* Image skeleton */}
+          <div className="space-y-3">
+            <div className="aspect-[4/5] animate-pulse rounded-3xl bg-slate-200 dark:bg-slate-800" />
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="aspect-square animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+              ))}
+            </div>
+          </div>
+          {/* Info skeleton */}
+          <div className="space-y-5">
+            {/* Breadcrumb */}
+            <div className="flex gap-2">
+              <div className="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-3 w-3 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+            {/* Title */}
+            <div className="space-y-2">
+              <div className="h-8 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-8 w-1/2 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+            {/* Rating */}
+            <div className="h-4 w-32 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+            {/* Description */}
+            <div className="space-y-2">
+              <div className="h-3 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              <div className="h-3 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              <div className="h-3 w-2/3 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+            </div>
+            {/* Price */}
+            <div className="h-8 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+            {/* Stock badge */}
+            <div className="h-6 w-20 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+            {/* Size label */}
+            <div className="h-4 w-16 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+            {/* Size buttons */}
+            <div className="flex gap-2">
+              {['XS','S','M','L','XL'].map((s) => (
+                <div key={s} className="h-10 w-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+              ))}
+            </div>
+            {/* CTA buttons */}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="h-11 animate-pulse rounded-lg bg-slate-300 dark:bg-slate-600" />
+              <div className="h-11 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+            </div>
+          </div>
+        </section>
+      </main>
+    )
   }
 
   const hasReviews = reviewStats.reviewsCount > 0

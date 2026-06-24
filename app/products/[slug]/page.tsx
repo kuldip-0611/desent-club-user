@@ -20,12 +20,16 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
         description: string
         price: number
         images: string[]
-        category: { name: string }
+        category?: { name: string }
       }
 
       const title = `${product.name} | Disent Club`
       const description = product.description?.slice(0, 160) || `Buy ${product.name} at Disent Club — premium clothing delivered to your door.`
-      const image = product.images[0] ?? `${SITE_URL}/og-default.jpg`
+      const productImage = product.images[0]
+      // Use dynamic OG route to produce a landscape 1200×630 image (WhatsApp/social requires landscape)
+      const ogImageUrl = productImage
+        ? `${SITE_URL}/api/og?title=${encodeURIComponent(product.name)}&subtitle=${encodeURIComponent((product.category?.name) ?? 'Disent Club')}&image=${encodeURIComponent(productImage)}`
+        : `${SITE_URL}/og-image.jpg`
 
       return {
         title,
@@ -34,16 +38,16 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
           title,
           description,
           url: `${SITE_URL}/products/${slug}`,
-          images: [{ url: image, width: 800, height: 1000, alt: product.name }],
+          images: [{ url: ogImageUrl, width: 1200, height: 630, alt: product.name }],
           type: 'website',
         },
         twitter: {
           card: 'summary_large_image',
           title,
           description,
-          images: [image],
+          images: [ogImageUrl],
         },
-        keywords: [product.name, product.category.name, 'clothing', 'fashion', 'Disent Club'],
+        keywords: [product.name, product.category?.name ?? '', 'clothing', 'fashion', 'Disent Club'].filter(Boolean),
       }
     }
   } catch {

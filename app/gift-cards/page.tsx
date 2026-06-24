@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { StoreShell } from '@/modules/shop/components/store-shell'
 import { toast } from 'react-hot-toast'
 import { Gift, CheckCircle2, CreditCard, Copy, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth-store'
@@ -218,6 +219,7 @@ export default function GiftCardsPage() {
   ]
 
   return (
+    <StoreShell>
     <section className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-2xl space-y-6">
 
@@ -509,5 +511,6 @@ export default function GiftCardsPage() {
         </div>
       </div>
     </section>
+    </StoreShell>
   )
 }

@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, SlidersHorizontal, X } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
+import { ProductCardSkeleton } from '@/modules/shop/components/product-card-skeleton'
 import { QuickViewModal } from '@/modules/shop/components/quick-view-modal'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useInfiniteProductsQuery, useShopCategoriesQuery } from '@/hooks/query/use-products-query'
 import { useUiStore } from '@/store/ui-store'
@@ -137,6 +137,31 @@ export const ProductsPageModule = ({
   const activeCategory = useMemo(() => categories.find((c) => c.slug === category), [categories, category])
   const subcategoryOptions = useMemo(() => activeCategory?.subcategories ?? [], [activeCategory])
 
+  // Infinite scroll via IntersectionObserver.
+  // Use a stable ref for the callback so the observer never needs to be
+  // recreated on every render. Only attach after the first page has loaded.
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const fetchNextRef = useRef<() => void>(() => undefined)
+  fetchNextRef.current = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  useEffect(() => {
+    // Don't attach until the initial fetch is done — sentinel would be
+    // visible on an empty/skeleton page and fire for every page at once.
+    if (isLoading) return
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) fetchNextRef.current() },
+      { rootMargin: '300px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  // Only re-run when loading transitions from true→false (not on every render)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading])
+
   const hasActiveFilters =
     selectedColors.length > 0 ||
     selectedSizes.length > 0 ||
@@ -159,64 +184,87 @@ export const ProductsPageModule = ({
   }
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-      {/* ── Header row ── */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{activeCategory ? activeCategory.name : 'Products'}</h1>
-          <p className="text-sm text-slate-500">
-            {activeCategory
-              ? `Browse ${activeCategory.name.toLowerCase()}${subcategory.trim() ? ` · ${subcategoryOptions.find((s) => s.slug === subcategory.trim().toLowerCase())?.name ?? subcategory}` : ''}`
-              : 'Discover premium fits.'}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition ${
-              showFilters || hasActiveFilters
-                ? 'border-slate-900 bg-slate-900 text-white'
-                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filters
-            {hasActiveFilters && (
-              <span className="ml-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {[selectedColors.length, selectedSizes.length, selectedFabrics.length, priceMin !== undefined || priceMax !== undefined ? 1 : 0, minRating !== undefined ? 1 : 0].reduce((a, b) => a + b, 0)}
-              </span>
-            )}
-          </button>
+    <main className="mx-auto max-w-7xl space-y-3 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-8">
+      {/* ── Header ── */}
+      <div>
+        <h1 className="text-xl font-bold sm:text-2xl">{activeCategory ? activeCategory.name : 'Products'}</h1>
+        <p className="text-xs text-slate-500 sm:text-sm">
+          {activeCategory
+            ? `Browse ${activeCategory.name.toLowerCase()}${subcategory.trim() ? ` · ${subcategoryOptions.find((s) => s.slug === subcategory.trim().toLowerCase())?.name ?? subcategory}` : ''}`
+            : 'Discover premium fits.'}
+        </p>
+      </div>
+
+      {/* ── Controls: single scrollable row on mobile ── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
+        {/* Filters button */}
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+            showFilters || hasActiveFilters
+              ? 'border-slate-900 bg-slate-900 text-white'
+              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span className="hidden sm:inline">Filters</span>
+          {hasActiveFilters && (
+            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold">
+              {[selectedColors.length, selectedSizes.length, selectedFabrics.length, priceMin !== undefined || priceMax !== undefined ? 1 : 0, minRating !== undefined ? 1 : 0].reduce((a, b) => a + b, 0)}
+            </span>
+          )}
+        </button>
+
+        {/* Category */}
+        <div className="relative shrink-0">
           <select
             value={category}
             onChange={(e) => updateProductFilters({ category: e.target.value, subcategory: '' })}
-            className="h-10 rounded-xl border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+            className="h-9 appearance-none rounded-xl border border-slate-300 bg-white py-0 pl-2.5 pr-7 text-xs text-slate-800 outline-none focus:border-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 sm:h-10 sm:pl-3 sm:pr-9 sm:text-sm"
           >
             <option value="all">All categories</option>
             {categories.map((item) => <option key={item.id} value={item.slug}>{item.name}</option>)}
           </select>
-          <select value={audience} onChange={(e) => updateProductFilters({ audience: e.target.value })} className="h-10 rounded-xl border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 sm:right-3 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/></svg>
+        </div>
+
+        {/* Audience */}
+        <div className="relative shrink-0">
+          <select
+            value={audience}
+            onChange={(e) => updateProductFilters({ audience: e.target.value })}
+            className="h-9 appearance-none rounded-xl border border-slate-300 bg-white py-0 pl-2.5 pr-7 text-xs text-slate-800 outline-none focus:border-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 sm:h-10 sm:pl-3 sm:pr-9 sm:text-sm"
+          >
             <option value="all">All shoppers</option>
             <option value="MEN">Men</option>
             <option value="WOMEN">Women</option>
           </select>
-          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-10 rounded-xl border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 sm:right-3 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/></svg>
+        </div>
+
+        {/* Sort */}
+        <div className="relative shrink-0">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+            className="h-9 appearance-none rounded-xl border border-slate-300 bg-white py-0 pl-2.5 pr-7 text-xs text-slate-800 outline-none focus:border-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 sm:h-10 sm:pl-3 sm:pr-9 sm:text-sm"
+          >
             <option value="featured">Featured</option>
-            <option value="price-low">Price: low to high</option>
-            <option value="price-high">Price: high to low</option>
+            <option value="price-low">Price: low → high</option>
+            <option value="price-high">Price: high → low</option>
             <option value="rating">Top rated</option>
           </select>
+          <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 sm:right-3 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/></svg>
         </div>
       </div>
 
-      {/* ── Subcategory pills ── */}
+      {/* ── Subcategory pills — horizontally scrollable on mobile ── */}
       {category !== 'all' && subcategoryOptions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible">
           <button
             type="button"
             onClick={() => updateProductFilters({ subcategory: '' })}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${!subcategory.trim() ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium transition sm:px-3 sm:py-1.5 ${!subcategory.trim() ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
           >
             All
           </button>
@@ -225,10 +273,10 @@ export const ProductsPageModule = ({
               key={s.id}
               type="button"
               onClick={() => updateProductFilters({ subcategory: s.slug })}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${subcategory.trim().toLowerCase() === s.slug.toLowerCase() ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+              className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium transition sm:px-3 sm:py-1.5 ${subcategory.trim().toLowerCase() === s.slug.toLowerCase() ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
             >
               {s.name}
-              {typeof s.productCount === 'number' && <span className="ml-1 text-slate-400">({s.productCount})</span>}
+              {typeof s.productCount === 'number' && <span className="ml-1 opacity-50">({s.productCount})</span>}
             </button>
           ))}
         </div>
@@ -357,37 +405,39 @@ export const ProductsPageModule = ({
         </div>
       )}
 
-      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by product name..." />
+      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by product name..." className="h-9 text-sm sm:h-10" />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((product) => (
-          <div key={product.id} className="relative">
-            <ProductCard product={product} />
-            <button
-              onClick={() => openModal('quickView', { productId: product.id })}
-              className="absolute right-3 top-3 rounded-full bg-white/90 p-2 shadow"
-              aria-label="Quick view"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
+      {/* Product grid */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+        {isLoading
+          ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)
+          : products.map((product) => (
+              <div key={product.id} className="relative">
+                <ProductCard product={product} />
+                <button
+                  onClick={() => openModal('quickView', { productId: product.id })}
+                  className="absolute right-3 top-3 rounded-full bg-white/90 p-2 shadow"
+                  aria-label="Quick view"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+
+        {/* Skeleton rows while fetching next page */}
+        {isFetchingNextPage
+          ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={`next-${i}`} />)
+          : null}
       </div>
 
-      {isLoading ? <p className="text-sm text-slate-500">Loading products...</p> : null}
       {!isLoading && products.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-600">
+        <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
           No products match these filters. Try adjusting your selection.
         </p>
       ) : null}
 
-      {hasNextPage ? (
-        <div className="flex justify-center">
-          <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? 'Loading...' : 'Load more'}
-          </Button>
-        </div>
-      ) : null}
+      {/* Intersection observer sentinel */}
+      <div ref={sentinelRef} className="h-1" aria-hidden />
 
       <QuickViewModal />
     </main>

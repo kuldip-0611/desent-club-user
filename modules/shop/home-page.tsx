@@ -14,8 +14,8 @@ function useIsMobile() {
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
+import { ProductCardSkeleton } from '@/modules/shop/components/product-card-skeleton'
 import { RecentlyViewedSection } from '@/modules/shop/components/recently-viewed'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useShopHomeQuery } from '@/hooks/query/use-products-query'
 import type { HomeBanner } from '@/services/product.service'
 
@@ -200,16 +200,37 @@ export const HomePageModule = () => {
 
   return (
     <main className="mx-auto max-w-7xl space-y-14 px-4 py-8 sm:px-6">
-      {banners.length > 0 && (
-        <section>
+      <section>
+        {isLoading ? (
+          <div className={`grid items-stretch gap-4 ${perSlide === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+            {Array.from({ length: perSlide }).map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800 sm:h-80" />
+            ))}
+          </div>
+        ) : banners.length > 0 ? (
           <PairedBannerCarousel banners={banners} variant="hero" perSlide={perSlide} />
-        </section>
-      )}
+        ) : null}
+      </section>
 
       <section>
         <h2 className="mb-5 text-2xl font-bold">Shop by category</h2>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {categories.map((item) => (
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                  <div className="aspect-[4/3] animate-pulse bg-slate-200 dark:bg-slate-800" />
+                  <div className="space-y-2 p-5">
+                    <div className="h-5 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                    <div className="flex gap-1.5 pt-1">
+                      {[40,56,48].map((w, j) => (
+                        <div key={j} style={{ width: w }} className="h-4 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            : categories.map((item) => (
             <Link
               key={item.id}
               href={`/products?category=${item.slug}`}
@@ -247,19 +268,13 @@ export const HomePageModule = () => {
             View all
           </Link>
         </div>
-        {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-80" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {bestSellers.slice(0, 4).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            : bestSellers.slice(0, 4).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+        </div>
       </section>
 
       {midBanners.length > 0 && (

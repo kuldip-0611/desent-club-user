@@ -296,7 +296,7 @@ export const Navbar = () => {
                     <Link
                       href={`/products?category=${cat.slug}`}
                       onClick={() => setMegaMenuOpen(false)}
-                      className={cn('text-sm font-semibold hover:text-slate-600', isDark ? 'text-slate-100' : 'text-slate-900')}
+                      className={cn('text-sm font-semibold', isDark ? 'text-slate-100 hover:text-white' : 'text-slate-900 hover:text-slate-600')}
                     >
                       {cat.name}
                     </Link>
@@ -307,7 +307,7 @@ export const Navbar = () => {
                             <Link
                               href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
                               onClick={() => setMegaMenuOpen(false)}
-                              className={cn('text-xs hover:text-slate-600', isDark ? 'text-slate-400' : 'text-slate-600')}
+                              className={cn('text-xs', isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-600')}
                             >
                               {sub.name}
                             </Link>

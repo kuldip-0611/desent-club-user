@@ -29,12 +29,11 @@ function ComparePageInner() {
 
   useEffect(() => {
     if (!ids.length) { setLoading(false); return; }
-    listProducts({ limit: 50 })
+    listProducts({ ids: ids.join(','), limit: ids.length })
       .then((res) => {
-        const ordered = ids
-          .map((id) => (res.items ?? []).find((p) => p.id === id))
-          .filter(Boolean) as Product[];
-        setProducts(ordered);
+        // Preserve the user's comparison order
+        const map = new Map((res.items ?? []).map((p) => [p.id, p]))
+        setProducts(ids.map((id) => map.get(id)).filter(Boolean) as Product[])
       })
       .catch(console.error)
       .finally(() => setLoading(false));

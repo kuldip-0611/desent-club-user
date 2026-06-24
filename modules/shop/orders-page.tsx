@@ -105,19 +105,37 @@ export const OrdersPageModule = () => {
                 </div>
 
                 <ul className="mt-3 space-y-2">
-                  {order.items.map((item) => (
+                  {order.items.map((item) => {
+                    const productHref = item.product.slug ? `/products/${item.product.slug}` : null
+                    return (
                     <li key={item.id} className="flex items-center gap-3 text-sm">
                       {item.product.images[0] ? (
-                        <img
-                          src={item.product.images[0].path}
-                          alt={item.product.name}
-                          className="h-12 w-12 rounded-lg object-cover"
-                        />
+                        productHref ? (
+                          <Link href={productHref}>
+                            <img
+                              src={item.product.images[0].path}
+                              alt={item.product.name}
+                              className="h-12 w-12 rounded-lg object-cover hover:opacity-80 transition"
+                            />
+                          </Link>
+                        ) : (
+                          <img
+                            src={item.product.images[0].path}
+                            alt={item.product.name}
+                            className="h-12 w-12 rounded-lg object-cover"
+                          />
+                        )
                       ) : (
                         <div className="h-12 w-12 rounded-lg bg-slate-100" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{item.product.name}</p>
+                        {productHref ? (
+                          <Link href={productHref} className="truncate font-medium hover:text-indigo-600 hover:underline block">
+                            {item.product.name}
+                          </Link>
+                        ) : (
+                          <p className="truncate font-medium">{item.product.name}</p>
+                        )}
                         <p className="text-xs text-slate-500">
                           {[item.size, item.color].filter(Boolean).join(' · ')}
                           {[item.size, item.color].some(Boolean) ? ' · ' : ''}
@@ -126,7 +144,8 @@ export const OrdersPageModule = () => {
                       </div>
                       <p className="font-medium">Rs. {item.total}</p>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm dark:border-slate-700">
