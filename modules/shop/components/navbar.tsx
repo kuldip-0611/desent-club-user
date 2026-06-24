@@ -125,8 +125,10 @@ export const Navbar = () => {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'whitespace-nowrap text-sm font-medium transition-colors',
-                  isDark ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-slate-900',
+                  'whitespace-nowrap rounded-md px-2 py-1 text-sm font-medium transition-colors',
+                  isDark
+                    ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
                 )}
               >
                 {item.label}
@@ -137,8 +139,10 @@ export const Navbar = () => {
               onMouseEnter={() => setMegaMenuOpen(true)}
               onMouseLeave={() => setMegaMenuOpen(false)}
               className={cn(
-                'text-sm font-medium transition-colors',
-                isDark ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-slate-900',
+                'rounded-md px-2 py-1 text-sm font-medium transition-colors',
+                isDark
+                  ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
               )}
             >
               Categories
@@ -159,7 +163,7 @@ export const Navbar = () => {
               placeholder="Search tees, tracks, hoodies..."
               className={cn(
                 'pl-9',
-                isDark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:border-slate-900' : '',
+                isDark ? 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:border-slate-400' : '',
               )}
             />
             <AnimatePresence>
@@ -296,7 +300,7 @@ export const Navbar = () => {
                     <Link
                       href={`/products?category=${cat.slug}`}
                       onClick={() => setMegaMenuOpen(false)}
-                      className={cn('text-sm font-semibold', isDark ? 'text-slate-100 hover:text-white' : 'text-slate-900 hover:text-slate-600')}
+                      className={cn('text-sm font-semibold transition-colors', isDark ? 'text-slate-100 hover:text-white' : 'text-slate-900 hover:text-slate-600')}
                     >
                       {cat.name}
                     </Link>
@@ -307,7 +311,7 @@ export const Navbar = () => {
                             <Link
                               href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
                               onClick={() => setMegaMenuOpen(false)}
-                              className={cn('text-xs', isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-600')}
+                              className={cn('text-xs transition-colors', isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-600 hover:text-slate-900')}
                             >
                               {sub.name}
                             </Link>
@@ -324,7 +328,7 @@ export const Navbar = () => {
                 <Link
                   href="/products?audience=MEN"
                   onClick={() => setMegaMenuOpen(false)}
-                  className={cn('rounded-xl border p-4', isDark ? 'border-slate-800 hover:bg-slate-900' : 'border-slate-200 hover:bg-slate-50')}
+                  className={cn('rounded-xl border p-4 transition-colors', isDark ? 'border-slate-800 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50')}
                 >
                   <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>Men</p>
                   <p className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>
@@ -334,7 +338,7 @@ export const Navbar = () => {
                 <Link
                   href="/products?audience=WOMEN"
                   onClick={() => setMegaMenuOpen(false)}
-                  className={cn('rounded-xl border p-4', isDark ? 'border-slate-800 hover:bg-slate-900' : 'border-slate-200 hover:bg-slate-50')}
+                  className={cn('rounded-xl border p-4 transition-colors', isDark ? 'border-slate-800 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50')}
                 >
                   <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>Women</p>
                   <p className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>
@@ -414,7 +418,7 @@ export const Navbar = () => {
                     className={cn(
                       'w-full rounded-lg border pl-9 pr-4 py-2.5 text-sm outline-none transition-colors',
                       isDark
-                        ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500 focus:border-slate-900'
+                        ? 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:border-slate-400'
                         : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-900',
                     )}
                   />

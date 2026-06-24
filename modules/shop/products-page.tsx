@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, SlidersHorizontal, X } from 'lucide-react'
+import { Eye, Search, SlidersHorizontal, X } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
 import { ProductCardSkeleton } from '@/modules/shop/components/product-card-skeleton'
 import { QuickViewModal } from '@/modules/shop/components/quick-view-modal'
@@ -405,7 +405,15 @@ export const ProductsPageModule = ({
         </div>
       )}
 
-      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by product name..." className="h-9 text-sm sm:h-10" />
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-400" />
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by product name..."
+          className="h-9 pl-9 text-sm sm:h-10"
+        />
+      </div>
 
       {/* Product grid */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
@@ -415,11 +423,12 @@ export const ProductsPageModule = ({
               <div key={product.id} className="relative">
                 <ProductCard product={product} />
                 <button
+                  type="button"
                   onClick={() => openModal('quickView', { productId: product.id })}
-                  className="absolute right-3 top-3 rounded-full bg-white/90 p-2 shadow"
+                  className="absolute right-2 top-2 z-10 rounded-full bg-black/55 p-2 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/75 sm:right-3 sm:top-3"
                   aria-label="Quick view"
                 >
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-4 w-4" strokeWidth={2.25} />
                 </button>
               </div>
             ))}
