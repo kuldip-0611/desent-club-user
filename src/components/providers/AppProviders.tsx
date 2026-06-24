@@ -6,8 +6,8 @@ import { Toaster } from 'react-hot-toast';
 import { createQueryClient } from '@/lib/query-client';
 import { useUiStore } from '@/store/ui-store';
 import { PushNotificationInitializer } from '@/components/push-notification-initializer';
-import { getGstRate } from '@/services/settings.service';
-import { setLiveGstRate } from '@/store/cart-store';
+import { getGstRate, getPublicSettings } from '@/services/settings.service';
+import { setLiveGstRate, setShippingConfig } from '@/store/cart-store';
 import { useGstStore } from '@/store/gst-store';
 import { useFlashSaleStore } from '@/store/flash-sale-store';
 import { apiClient } from '@/services/api/client';
@@ -29,7 +29,10 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
       window.localStorage.removeItem('auth_token');
       window.localStorage.removeItem('auth_user');
     }
-    getGstRate().then((rate) => { setLiveGstRate(rate); setGstRate(rate) }).catch(() => undefined);
+    getGstRate().then((rate) => { setLiveGstRate(rate); setGstRate(rate) }).catch(() => undefined)
+    getPublicSettings().then((s) => {
+      setShippingConfig(parseFloat(s.freeShippingThreshold) || 999, parseFloat(s.shippingFee) || 99)
+    }).catch(() => undefined)
 
     // Load active flash sales and build product→sale map for badges
     type SaleGroup = { sale: { id: string; title: string; discountPercent: number }; items: { id: string }[] }

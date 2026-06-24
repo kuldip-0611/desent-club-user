@@ -3,8 +3,11 @@ import { apiClient } from '@/services/api/client'
 export interface PublicStoreSettings {
   defaultGstRate: string
   freeShippingThreshold: string
+  shippingFee: string
   currency: string
   storeName: string
+  supportEmail: string
+  supportPhone: string
 }
 
 let cached: PublicStoreSettings | null = null

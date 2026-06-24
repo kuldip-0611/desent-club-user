@@ -6,7 +6,7 @@ import { Star } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { CartCouponsSection } from '@/modules/shop/components/cart-coupons-section'
-import { getCartSummary, useCartStore } from '@/store/cart-store'
+import { getCartSummary, useCartStore, getFreeShippingThreshold, getShippingFee } from '@/store/cart-store'
 import { useGstStore } from '@/store/gst-store'
 import { useUiStore } from '@/store/ui-store'
 import { useAuthStore } from '@/store/auth-store'
@@ -136,8 +136,13 @@ export const CartDrawer = () => {
               ) : null}
               <div className="flex justify-between text-slate-600">
                 <span>Shipping</span>
-                <span>{summary.shipping === 0 ? 'Free' : `Rs. ${summary.shipping}`}</span>
+                <span className={summary.shipping === 0 ? 'font-medium text-emerald-600' : ''}>{summary.shipping === 0 ? 'Free' : `Rs. ${summary.shipping}`}</span>
               </div>
+              {summary.shipping > 0 && getFreeShippingThreshold() > 0 && (
+                <p className="text-[10px] text-slate-400">
+                  Add Rs. {Math.max(0, getFreeShippingThreshold() - summary.subtotal + summary.discount)} more for free shipping
+                </p>
+              )}
               <div className="flex justify-between text-slate-600">
                 <span>GST ({Math.round(gstRate * 100)}%)</span>
                 <span>Rs. {summary.gst}</span>

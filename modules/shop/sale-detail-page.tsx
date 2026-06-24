@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Zap, Clock, ShoppingBag, ArrowLeft, ShoppingCart, X, ChevronRight } from 'lucide-react'
@@ -60,7 +60,7 @@ const QuickAddModal = ({ product, salePrice, onClose }: { product: SaleProduct; 
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
 
   useEffect(() => {
-    apiClient.get<ProductDetail>(`/products/${product.slug}`).then((r) => {
+    apiClient.get<ProductDetail>(`/shop/products/${product.slug}`).then((r) => {
       setDetail(r.data)
       const first = r.data.variants.find((v) => v.stock > 0) ?? r.data.variants[0]
       if (first) { setSelectedSize(first.size); setSelectedColor(first.colorName) }
@@ -220,19 +220,20 @@ const ProductCard = ({ product, salePrice, saleId }: { product: SaleProduct; sal
         {/* Info */}
         <div className="flex flex-1 flex-col p-3">
           {product.category && <span className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">{product.category.name}</span>}
-          <Link href={`/products/${product.slug}?from=sale&saleId=${saleId}`}>
-            <p className="line-clamp-2 flex-1 text-sm font-semibold leading-snug text-slate-800 hover:text-slate-600 dark:text-slate-100">{product.name}</p>
-          </Link>
-          <div className="mt-2 flex items-baseline gap-2">
+          <div className="flex-1">
+            <Link href={`/products/${product.slug}?from=sale&saleId=${saleId}`}>
+              <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-800 hover:text-slate-600 dark:text-slate-100">{product.name}</p>
+            </Link>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
             <span className="text-base font-black text-slate-900 dark:text-white">₹{salePrice.toLocaleString('en-IN')}</span>
             {product.mrp !== salePrice && <span className="text-xs text-slate-400 line-through">₹{product.mrp.toLocaleString('en-IN')}</span>}
           </div>
-          <p className="mb-3 text-[10px] text-slate-400">Incl. {Math.round(gstRate * 100)}% GST</p>
 
           {/* Add to cart button */}
           <button
             onClick={() => setShowModal(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
           >
             <ShoppingCart size={13} /> Add to Cart
           </button>
@@ -250,6 +251,10 @@ export const SaleDetailPageModule = ({ saleId }: { saleId: string }) => {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const loadingMoreRef = useRef(false)
+  const hasNextRef = useRef(false)
+  const pageRef = useRef(1)
 
   const fetchPage = useCallback(async (p: number) => {
     const res = await apiClient.get<SaleDetailData | null>(`/flash-sales/${saleId}/products?page=${p}&limit=24`)
@@ -258,27 +263,82 @@ export const SaleDetailPageModule = ({ saleId }: { saleId: string }) => {
 
   useEffect(() => {
     fetchPage(1)
-      .then((d) => { if (!d) setNotFound(true); else setData(d) })
+      .then((d) => {
+        if (!d) { setNotFound(true); return }
+        setData(d)
+        hasNextRef.current = d.hasNextPage
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [fetchPage])
 
-  const loadMore = async () => {
-    const next = page + 1
-    setLoadingMore(true)
-    const d = await fetchPage(next).catch(() => null)
-    if (d) {
-      setData((prev) => prev ? { ...d, items: [...prev.items, ...d.items] } : d)
-      setPage(next)
-    }
-    setLoadingMore(false)
-  }
+  // Sync hasNextPage into ref so the observer closure stays fresh
+  useEffect(() => { hasNextRef.current = data?.hasNextPage ?? false }, [data?.hasNextPage])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return
+        if (loadingMoreRef.current || !hasNextRef.current) return
+        loadingMoreRef.current = true
+        setLoadingMore(true)
+        const next = pageRef.current + 1
+        fetchPage(next)
+          .then((d) => {
+            if (!d) return
+            setData((prev) => prev ? { ...d, items: [...prev.items, ...d.items] } : d)
+            pageRef.current = next
+            setPage(next)
+            hasNextRef.current = d.hasNextPage
+          })
+          .catch(() => undefined)
+          .finally(() => { loadingMoreRef.current = false; setLoadingMore(false) })
+      },
+      { rootMargin: '200px' },
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [fetchPage, loading])
 
   if (loading) return (
-    <div className="mx-auto max-w-7xl px-4 py-12">
-      <div className="mb-8 h-48 animate-pulse rounded-3xl bg-slate-100 dark:bg-slate-800" />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: 12 }).map((_, i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />)}
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      {/* Back link skeleton */}
+      <div className="mb-5 h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+
+      {/* Hero banner skeleton */}
+      <div className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-700 p-7 sm:p-12">
+        <div className="flex flex-wrap items-center justify-between gap-6">
+          <div className="space-y-3">
+            <div className="h-5 w-20 animate-pulse rounded-full bg-amber-200 dark:bg-slate-600" />
+            <div className="h-10 w-64 animate-pulse rounded-xl bg-amber-200 dark:bg-slate-600 sm:w-80" />
+            <div className="h-4 w-32 animate-pulse rounded-full bg-amber-200 dark:bg-slate-600" />
+          </div>
+          <div className="flex flex-col items-end gap-3">
+            <div className="h-28 w-32 animate-pulse rounded-2xl bg-amber-200 dark:bg-slate-600" />
+            <div className="h-8 w-48 animate-pulse rounded-full bg-amber-200 dark:bg-slate-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Count line */}
+      <div className="mb-4 h-4 w-24 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+
+      {/* Product card skeletons */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+            <div className="aspect-[3/4] animate-pulse bg-slate-100 dark:bg-slate-800" />
+            <div className="flex flex-col gap-2 p-3">
+              <div className="h-3 w-16 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+              <div className="h-4 w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+              <div className="h-4 w-3/4 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+              <div className="mt-2 h-5 w-24 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+              <div className="mt-2 h-9 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -305,26 +365,26 @@ export const SaleDetailPageModule = ({ saleId }: { saleId: string }) => {
       </Link>
 
       {/* Hero banner */}
-      <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-orange-400 to-amber-500 p-7 shadow-xl sm:p-12">
-        <div className="pointer-events-none absolute inset-0 opacity-10">
+      <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-amber-200 via-orange-200 to-amber-300 p-7 shadow-xl sm:p-12">
+        <div className="pointer-events-none absolute inset-0 opacity-15">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Zap key={i} size={100} className="absolute text-white" style={{ top: `${(i * 37) % 80}%`, left: `${(i * 53) % 90}%`, transform: 'rotate(15deg)' }} />
+            <Zap key={i} size={100} className="absolute text-amber-400" style={{ top: `${(i * 37) % 80}%`, left: `${(i * 53) % 90}%`, transform: 'rotate(15deg)' }} />
           ))}
         </div>
         <div className="relative flex flex-wrap items-center justify-between gap-6">
           <div>
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-black/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-amber-800">
               <Zap size={11} fill="currentColor" /> Flash Sale
             </span>
-            <h1 className="text-3xl font-black text-white drop-shadow sm:text-5xl">{sale.title}</h1>
-            <p className="mt-1.5 text-amber-100">{total} product{total !== 1 ? 's' : ''} on sale</p>
+            <h1 className="text-3xl font-black text-amber-900 sm:text-5xl">{sale.title}</h1>
+            <p className="mt-1.5 text-amber-700">{total} product{total !== 1 ? 's' : ''} on sale</p>
           </div>
           <div className="flex flex-col items-end gap-3">
-            <div className="rounded-2xl bg-black/20 px-6 py-4 text-center backdrop-blur-sm">
-              <p className="text-6xl font-black text-white sm:text-7xl">{sale.discountPercent}%</p>
-              <p className="text-lg font-bold text-amber-200">OFF</p>
+            <div className="rounded-2xl bg-white/40 px-6 py-4 text-center backdrop-blur-sm">
+              <p className="text-6xl font-black text-amber-900 sm:text-7xl">{sale.discountPercent}%</p>
+              <p className="text-lg font-bold text-amber-700">OFF</p>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-black/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+            <div className="flex items-center gap-2 rounded-full bg-white/40 px-4 py-2 text-sm font-semibold text-amber-800 backdrop-blur-sm">
               <Clock size={14} /> Ends in <Countdown endsAt={sale.endsAt} />
             </div>
           </div>
@@ -341,17 +401,14 @@ export const SaleDetailPageModule = ({ saleId }: { saleId: string }) => {
               <ProductCard key={p.id} product={p} salePrice={p.salePrice} saleId={saleId} />
             ))}
           </div>
-          {data.hasNextPage && (
-            <div className="mt-10 text-center">
-              <button
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-8 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-              >
-                {loadingMore ? 'Loading…' : `Load more · ${total - items.length} remaining`}
-              </button>
-            </div>
-          )}
+          <div ref={sentinelRef} className="mt-10 flex h-12 items-center justify-center">
+            {loadingMore && (
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+                Loading more…
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

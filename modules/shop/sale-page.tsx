@@ -83,7 +83,7 @@ const QuickAddModal = ({ product, onClose }: { product: SaleProduct; onClose: ()
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
 
   useEffect(() => {
-    apiClient.get<ProductDetail>(`/products/${product.slug}`).then((r) => {
+    apiClient.get<ProductDetail>(`/shop/products/${product.slug}`).then((r) => {
       setDetail(r.data)
       const first = r.data.variants.find((v) => v.stock > 0) ?? r.data.variants[0]
       if (first) { setSelectedSize(first.size); setSelectedColor(first.colorName) }
@@ -207,18 +207,19 @@ const SaleProductCard = ({ product, theme }: { product: SaleProduct; theme: type
         </Link>
 
         {/* Info */}
-        <div className="flex flex-1 flex-col gap-1 p-3">
+        <div className="flex flex-1 flex-col p-3">
           {product.category && <span className="text-[10px] uppercase tracking-widest text-slate-400">{product.category.name}</span>}
-          <Link href={`/products/${product.slug}`}>
-            <p className="line-clamp-2 text-sm font-medium leading-snug text-slate-800 hover:text-slate-600 dark:text-slate-200">{product.name}</p>
-          </Link>
-          <div className="mt-auto flex items-baseline gap-2 pt-1">
+          <div className="flex-1 mt-1">
+            <Link href={`/products/${product.slug}`}>
+              <p className="line-clamp-2 text-sm font-medium leading-snug text-slate-800 hover:text-slate-600 dark:text-slate-200">{product.name}</p>
+            </Link>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
             <span className="text-base font-bold text-slate-900 dark:text-white">₹{product.salePrice.toLocaleString('en-IN')}</span>
             {product.mrp !== product.salePrice && <span className="text-xs text-slate-400 line-through">₹{product.mrp.toLocaleString('en-IN')}</span>}
           </div>
-          <p className="mb-2 text-[10px] text-slate-400">Incl. {Math.round(gstRate * 100)}% GST</p>
           <button onClick={() => setShowModal(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
             <ShoppingCart size={13} /> Add to Cart
           </button>
         </div>
@@ -274,11 +275,38 @@ export const SalePageModule = () => {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-8 px-4 py-10">
-        <div className="h-28 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+      <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6">
+        {/* Banner skeleton */}
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 animate-pulse rounded-full bg-slate-200 dark:bg-slate-600" />
+              <div className="space-y-2">
+                <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-600" />
+                <div className="h-6 w-48 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-600" />
+                <div className="h-3 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-slate-600" />
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="h-12 w-28 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-600" />
+              <div className="h-5 w-40 animate-pulse rounded-full bg-slate-200 dark:bg-slate-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Product card skeletons */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+            <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+              <div className="aspect-[3/4] animate-pulse bg-slate-100 dark:bg-slate-800" />
+              <div className="flex flex-col gap-2 p-3">
+                <div className="h-3 w-16 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+                <div className="h-4 w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="h-4 w-2/3 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="mt-2 h-5 w-20 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                <div className="mt-2 h-9 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -304,7 +332,7 @@ export const SalePageModule = () => {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-4 py-10">
+    <div className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6">
       {groups.map((group, index) => {
         const theme = SALE_THEMES[index % SALE_THEMES.length]
         return (

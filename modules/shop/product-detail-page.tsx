@@ -499,10 +499,6 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
               </span>
             ) : null}
           </div>
-          <p className="text-xs text-slate-400">
-            Incl. {Math.round(gstRate * 100)}% GST
-          </p>
-
           {/* Flash sale countdown — only if API provided an endsAt */}
           {activeSale?.endsAt && new Date(activeSale.endsAt) > new Date() && (
             <FlashSaleCountdown

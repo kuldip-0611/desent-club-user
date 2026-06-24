@@ -31,7 +31,17 @@ export const setLiveGstRate = (rate: number) => {
   import('@/store/gst-store').then(({ useGstStore }) => useGstStore.getState().setRate(rate))
 }
 
-const SHIPPING_FEE = 99
+// Shipping config — loaded from admin settings at boot
+let _freeShippingThreshold = 999
+let _shippingFee = 99
+export const setShippingConfig = (threshold: number, fee: number) => {
+  _freeShippingThreshold = threshold
+  _shippingFee = fee
+}
+export const getLiveShippingFee = (subtotal: number): number =>
+  _freeShippingThreshold > 0 && subtotal >= _freeShippingThreshold ? 0 : _shippingFee
+export const getFreeShippingThreshold = () => _freeShippingThreshold
+export const getShippingFee = () => _shippingFee
 
 export const getCartCount = (lines: CartLine[]): number =>
   lines.reduce((sum, line) => sum + line.quantity, 0)
@@ -46,7 +56,7 @@ export const getCartSummary = (lines: CartLine[], couponDiscount: number, gstRat
   const subtotal = getCartSubtotal(lines)
   const discount = Math.min(Math.max(Math.round(couponDiscount), 0), subtotal)
   const taxable = Math.max(subtotal - discount, 0)
-  const shipping = subtotal > 1999 ? 0 : SHIPPING_FEE
+  const shipping = getLiveShippingFee(subtotal - discount)
   const gst = Math.round(taxable * gstRate)
   const total = taxable + shipping + gst
   return { subtotal, discount, shipping, gst, total }
