@@ -2,7 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react'
+
+function useIsMobile() {
+  return useSyncExternalStore(
+    (cb) => { const mq = window.matchMedia('(max-width: 767px)'); mq.addEventListener('change', cb); return () => mq.removeEventListener('change', cb) },
+    () => window.matchMedia('(max-width: 767px)').matches,
+    () => false,
+  )
+}
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
@@ -17,7 +25,6 @@ const variantStyles: Record<
   BannerVariant,
   {
     wrapper: string
-    aspect: string
     overlay: string
     title: string
     sub: string
@@ -27,7 +34,6 @@ const variantStyles: Record<
 > = {
   hero: {
     wrapper: 'relative overflow-hidden rounded-2xl shadow-md',
-    aspect: 'aspect-[16/7] sm:aspect-[21/8]',
     overlay:
       'absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/20 to-transparent p-5 sm:p-7 text-white',
     title: 'max-w-xs text-xl font-black leading-tight sm:text-2xl',
@@ -37,7 +43,6 @@ const variantStyles: Record<
   },
   mid: {
     wrapper: 'relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-md dark:border-slate-700',
-    aspect: 'aspect-[16/6] sm:aspect-[21/7]',
     overlay:
       'absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/25 to-transparent p-5 sm:p-6 text-white',
     title: 'max-w-sm text-xl font-bold leading-tight sm:text-2xl',
@@ -46,7 +51,6 @@ const variantStyles: Record<
   },
   footer: {
     wrapper: 'relative overflow-hidden rounded-2xl border border-slate-200/80 shadow-md dark:border-slate-700',
-    aspect: 'aspect-[16/6] sm:aspect-[21/7]',
     overlay:
       'absolute inset-0 flex flex-col justify-end items-start bg-gradient-to-t from-indigo-950/80 via-indigo-900/30 to-transparent p-5 sm:p-6 text-white sm:items-end sm:text-right',
     title: 'max-w-sm text-xl font-bold leading-tight sm:text-2xl',
@@ -55,12 +59,19 @@ const variantStyles: Record<
   },
 }
 
+// Fixed heights per variant — same height regardless of 1 or 2 per slide
+const variantHeight: Record<BannerVariant, string> = {
+  hero: 'h-64 sm:h-80',
+  mid: 'h-52 sm:h-64',
+  footer: 'h-52 sm:h-64',
+}
+
 const BannerSlide = ({ banner, variant }: { banner: HomeBanner; variant: BannerVariant }) => {
   const s = variantStyles[variant]
   const hasImage = Boolean(banner.image)
 
   return (
-    <div className={`${s.wrapper} ${s.aspect} h-full w-full ${!hasImage ? 'bg-slate-900' : ''}`}>
+    <div className={`${s.wrapper} ${variantHeight[variant]} w-full ${!hasImage ? 'bg-slate-900' : ''}`}>
       {hasImage && (
         <Image src={banner.image} alt={banner.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
       )}
@@ -128,7 +139,7 @@ const PairedBannerCarousel = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
-            className={`grid gap-4 ${
+            className={`grid items-stretch gap-4 ${
               isSingleInSlide ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
             }`}
           >
@@ -178,6 +189,8 @@ const PairedBannerCarousel = ({
 
 export const HomePageModule = () => {
   const { data, isLoading } = useShopHomeQuery()
+  const isMobile = useIsMobile()
+  const perSlide = isMobile ? 1 : 2
   const banners = data?.banners ?? []
   const midBanners = data?.midBanners ?? []
   const footerBanners = data?.footerBanners ?? []
@@ -189,7 +202,7 @@ export const HomePageModule = () => {
     <main className="mx-auto max-w-7xl space-y-14 px-4 py-8 sm:px-6">
       {banners.length > 0 && (
         <section>
-          <PairedBannerCarousel banners={banners} variant="hero" perSlide={2} />
+          <PairedBannerCarousel banners={banners} variant="hero" perSlide={perSlide} />
         </section>
       )}
 
@@ -257,7 +270,7 @@ export const HomePageModule = () => {
               <h2 className="text-2xl font-bold">Season highlights</h2>
             </div>
           </div>
-          <PairedBannerCarousel banners={midBanners} variant="mid" perSlide={2} />
+          <PairedBannerCarousel banners={midBanners} variant="mid" perSlide={perSlide} />
         </section>
       )}
 
@@ -280,7 +293,7 @@ export const HomePageModule = () => {
               <h2 className="text-2xl font-bold">More to explore</h2>
             </div>
           </div>
-          <PairedBannerCarousel banners={footerBanners} variant="footer" perSlide={2} />
+          <PairedBannerCarousel banners={footerBanners} variant="footer" perSlide={perSlide} />
         </section>
       )}
 

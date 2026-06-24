@@ -85,6 +85,8 @@ export const Footer = () => {
               <li><Link href="/support" className="hover:text-slate-900 transition-colors">Help Centre</Link></li>
               <li><Link href="/support#faq" className="hover:text-slate-900 transition-colors">FAQs</Link></li>
               <li><Link href="/support#shipping" className="hover:text-slate-900 transition-colors">Shipping Info</Link></li>
+              <li><Link href="/terms" className="hover:text-slate-900 transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link></li>
               <li>
                 <a href={supportMailtoHref} className="hover:text-slate-900 transition-colors">
                   Email Us

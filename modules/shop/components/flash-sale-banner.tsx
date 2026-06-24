@@ -56,30 +56,36 @@ export const FlashSaleBanner = () => {
   if (!sale || dismissed || remaining === 0) return null
 
   return (
-    <div className="relative flex flex-wrap items-center justify-center gap-3 bg-slate-900 px-6 py-2.5 text-white dark:bg-white dark:text-slate-900">
-      <span className="text-base">🔥</span>
-      <p className="text-sm font-semibold">
-        {sale.title} —{' '}
-        <span className="font-black text-yellow-300 dark:text-yellow-600">{sale.discountPercent}% off</span>
-        {' '}on selected products
-      </p>
-      {remaining !== null && remaining > 0 && (
-        <span className="rounded-md bg-white/20 px-2.5 py-0.5 font-mono text-xs font-bold tabular-nums dark:bg-slate-900/20">
-          ⏱ {formatCountdown(remaining)}
-        </span>
-      )}
-      {sales.length > 1 && (
-        <span className="text-xs text-white/60 dark:text-slate-500">
-          {currentIdx + 1}/{sales.length}
-        </span>
-      )}
+    <div className="relative bg-slate-900 px-8 py-2 text-white dark:bg-white dark:text-slate-900">
+      {/* Close button — always top-right, never disrupts layout */}
       <button
         onClick={() => setDismissed(true)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 opacity-70 hover:opacity-100"
+        className="absolute right-2.5 top-2 rounded-full p-1 opacity-60 hover:opacity-100"
         aria-label="Dismiss"
       >
         ✕
       </button>
+
+      {/* Content row */}
+      <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:justify-center sm:gap-3 sm:text-left">
+        <p className="text-sm font-semibold leading-snug">
+          🔥 {sale.title} —{' '}
+          <span className="font-black text-yellow-300 dark:text-yellow-600">{sale.discountPercent}% off</span>
+          {' '}on selected products
+        </p>
+        <div className="flex items-center gap-2">
+          {remaining !== null && remaining > 0 && (
+            <span className="rounded-md bg-white/20 px-2.5 py-0.5 font-mono text-xs font-bold tabular-nums dark:bg-slate-900/20">
+              ⏱ {formatCountdown(remaining)}
+            </span>
+          )}
+          {sales.length > 1 && (
+            <span className="text-xs text-white/60 dark:text-slate-500">
+              {currentIdx + 1}/{sales.length}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -161,6 +161,13 @@ export const AuthForm = ({ action }: AuthFormProps) => {
             {secondaryRoute.cta}
           </Link>
         </p>
+
+        <p className="mt-4 text-center text-xs text-white/40">
+          By continuing you agree to our{' '}
+          <Link href="/terms" className="underline hover:text-white/70">Terms of Service</Link>
+          {' '}and{' '}
+          <Link href="/privacy" className="underline hover:text-white/70">Privacy Policy</Link>
+        </p>
       </>
     );
   }
@@ -292,6 +299,13 @@ export const AuthForm = ({ action }: AuthFormProps) => {
         <Link href={secondaryRoute.href} className="font-medium text-white hover:underline">
           {secondaryRoute.cta}
         </Link>
+      </p>
+
+      <p className="mt-4 text-center text-xs text-white/40">
+        By continuing you agree to our{' '}
+        <Link href="/terms" className="underline hover:text-white/70">Terms of Service</Link>
+        {' '}and{' '}
+        <Link href="/privacy" className="underline hover:text-white/70">Privacy Policy</Link>
       </p>
     </>
   );

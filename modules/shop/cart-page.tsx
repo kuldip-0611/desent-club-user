@@ -47,20 +47,22 @@ export const CartPageModule = () => {
         ))}
       </section>
 
-      <aside className="h-fit space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-        <p className="text-lg font-semibold">Summary</p>
-        <div className="space-y-1 text-sm text-slate-600">
-          <p>Subtotal: Rs. {summary.subtotal}</p>
-          {summary.discount > 0 ? <p className="text-emerald-700">Discount: -Rs. {summary.discount}</p> : null}
-          <p>Shipping: Rs. {summary.shipping}</p>
-          <p>GST: Rs. {summary.gst}</p>
-        </div>
-        <p className="border-t border-slate-200 pt-2 text-base font-bold dark:border-slate-700">Total: Rs. {summary.total}</p>
-        <CartCouponsSection />
-        <Link href="/checkout">
-          <Button className="w-full">Proceed to checkout</Button>
-        </Link>
-      </aside>
+      {lines.length > 0 && (
+        <aside className="h-fit space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+          <p className="text-lg font-semibold">Summary</p>
+          <div className="space-y-1 text-sm text-slate-600">
+            <p>Subtotal: Rs. {summary.subtotal}</p>
+            {summary.discount > 0 ? <p className="text-emerald-700">Discount: -Rs. {summary.discount}</p> : null}
+            <p>Shipping: Rs. {summary.shipping}</p>
+            <p>GST: Rs. {summary.gst}</p>
+          </div>
+          <p className="border-t border-slate-200 pt-2 text-base font-bold dark:border-slate-700">Total: Rs. {summary.total}</p>
+          <CartCouponsSection />
+          <Link href="/checkout">
+            <Button className="w-full">Proceed to checkout</Button>
+          </Link>
+        </aside>
+      )}
     </main>
   )
 }

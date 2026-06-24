@@ -8,46 +8,82 @@ import { saveFcmToken } from '@/services/notification.service'
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? ''
 
-function buildSwUrl(): string {
-  const params = new URLSearchParams({
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '',
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '',
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '',
+/**
+ * Wait for the NEWEST SW in the registration to activate.
+ * When update() is called, reg.active = old SW and reg.installing = new SW.
+ * We must wait for the new one — not return early on the old active SW.
+ */
+function waitForActive(reg: ServiceWorkerRegistration): Promise<ServiceWorkerRegistration> {
+  return new Promise((resolve) => {
+    const newSw = reg.installing ?? reg.waiting
+    if (!newSw) {
+      // Nothing pending — current active SW is the one to use
+      resolve(reg)
+      return
+    }
+    const onStateChange = () => {
+      if (newSw.state === 'activated') {
+        newSw.removeEventListener('statechange', onStateChange)
+        resolve(reg)
+      }
+    }
+    newSw.addEventListener('statechange', onStateChange)
+    setTimeout(() => resolve(reg), 10_000)
   })
-  return `/firebase-messaging-sw.js?${params.toString()}`
 }
 
 async function registerPush(accessToken: string): Promise<boolean> {
-  if (!VAPID_KEY) return false
-  if (typeof window === 'undefined' || !('Notification' in window)) return false
+  if (!VAPID_KEY) { console.warn('[FCM] VAPID key not set'); return false }
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return false
+  if (!('Notification' in window)) return false
 
   const permission = await Notification.requestPermission()
-  if (permission !== 'granted') return false
+  if (permission !== 'granted') { console.log('[FCM] Permission not granted:', permission); return false }
 
-  const registrations = await navigator.serviceWorker.getRegistrations()
-  await Promise.all(
-    registrations
-      .filter((r) => r.active?.scriptURL.includes('/sw.js'))
-      .map((r) => r.unregister()),
-  )
+  // Unregister ALL service workers and re-register fresh — clears stale push subscriptions
+  const allRegs = await navigator.serviceWorker.getRegistrations()
+  await Promise.all(allRegs.map((r) => r.unregister()))
+  console.log('[FCM] Unregistered', allRegs.length, 'existing SW(s)')
 
-  const registration =
-    (await navigator.serviceWorker.getRegistration('/')) ??
-    (await navigator.serviceWorker.register(buildSwUrl(), { scope: '/' }))
+  // Clear Firebase FCM IndexedDB to avoid stale token state
+  try {
+    await new Promise<void>((res, rej) => {
+      const req = indexedDB.deleteDatabase('firebase-messaging-database')
+      req.onsuccess = () => res()
+      req.onerror = () => rej(req.error)
+      req.onblocked = () => res() // proceed even if blocked
+    })
+    console.log('[FCM] Cleared firebase-messaging-database')
+  } catch {
+    // best effort
+  }
+
+  // Register sw.js fresh
+  let reg = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+
+  // Wait for the new SW to fully activate
+  reg = await waitForActive(reg)
+  console.log('[FCM] SW active:', reg.active?.scriptURL)
 
   const messaging = getFirebaseMessaging()
-  if (!messaging) return false
+  if (!messaging) { console.warn('[FCM] Firebase messaging not available'); return false }
 
-  const token = await getToken(messaging, {
-    vapidKey: VAPID_KEY,
-    serviceWorkerRegistration: registration,
-  })
-  if (!token) return false
+  let token: string
+  try {
+    token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: reg,
+    })
+  } catch (err) {
+    console.error('[FCM] getToken() failed:', err)
+    return false
+  }
 
+  if (!token) { console.warn('[FCM] getToken() returned empty token'); return false }
+
+  console.log('[FCM] Token obtained, saving…', token.slice(-12))
   await saveFcmToken(token, accessToken)
+  console.log('[FCM] Token saved to backend ✓')
 
   onMessage(messaging, (payload) => {
     if (Notification.permission !== 'granted') return
@@ -68,29 +104,23 @@ export function usePushNotifications() {
   const registeredRef = useRef(false)
   const [pushState, setPushState] = useState<PushState>('idle')
 
-  // Detect current browser permission on mount
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      setPushState('unsupported')
-      return
+      setPushState('unsupported'); return
     }
     if (Notification.permission === 'granted') setPushState('granted')
     else if (Notification.permission === 'denied') setPushState('denied')
     else setPushState('idle')
   }, [])
 
-  // Auto-prompt: if permission not yet decided, ask after 4s delay once logged in
-  // If already granted, silently re-register token
   useEffect(() => {
     if (!user || !accessToken || registeredRef.current) return
     if (typeof window === 'undefined' || !('Notification' in window)) return
 
-    const alreadyGranted = Notification.permission === 'granted'
-
-    if (alreadyGranted) {
+    if (Notification.permission === 'granted') {
       registerPush(accessToken)
         .then((ok) => { if (ok) registeredRef.current = true })
-        .catch(() => undefined)
+        .catch((e) => console.error('[FCM] Auto re-register failed:', e))
       return
     }
 
@@ -98,31 +128,24 @@ export function usePushNotifications() {
       const timer = setTimeout(() => {
         registerPush(accessToken)
           .then((ok) => {
-            if (ok) {
-              registeredRef.current = true
-              setPushState('granted')
-            } else {
-              setPushState(Notification.permission === 'denied' ? 'denied' : 'idle')
-            }
+            if (ok) { registeredRef.current = true; setPushState('granted') }
+            else setPushState(Notification.permission === 'denied' ? 'denied' : 'idle')
           })
-          .catch(() => undefined)
+          .catch((e) => { console.error('[FCM] Auto-prompt failed:', e); setPushState('idle') })
       }, 4000)
       return () => clearTimeout(timer)
     }
   }, [user, accessToken])
 
   const requestPush = async () => {
-    if (!user || !accessToken || registeredRef.current) return
+    if (!accessToken || registeredRef.current) return
     setPushState('loading')
     try {
       const ok = await registerPush(accessToken)
-      if (ok) {
-        registeredRef.current = true
-        setPushState('granted')
-      } else {
-        setPushState(Notification.permission === 'denied' ? 'denied' : 'idle')
-      }
-    } catch {
+      if (ok) { registeredRef.current = true; setPushState('granted') }
+      else setPushState(Notification.permission === 'denied' ? 'denied' : 'idle')
+    } catch (e) {
+      console.error('[FCM] Manual request failed:', e)
       setPushState('idle')
     }
   }
