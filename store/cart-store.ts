@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { STORAGE_KEYS } from '@/constants/storage'
 import type { CartLine, CartSummary } from '@/types/cart'
+import { getLiveGstRate } from '@/store/gst-store'
 
 type AddLinePayload = Omit<CartLine, 'lineId'>
 
@@ -21,7 +22,15 @@ type CartState = {
   count: () => number
 }
 
-const GST_RATE = 0.18
+/** @deprecated — use useGstStore or getLiveGstRate() instead */
+export let LIVE_GST_RATE = 0.18
+/** @deprecated — use useGstStore.getState().setRate() instead */
+export const setLiveGstRate = (rate: number) => {
+  LIVE_GST_RATE = rate
+  // also sync to reactive store
+  import('@/store/gst-store').then(({ useGstStore }) => useGstStore.getState().setRate(rate))
+}
+
 const SHIPPING_FEE = 99
 
 export const getCartCount = (lines: CartLine[]): number =>
@@ -33,12 +42,12 @@ export const getCartCategoryIds = (lines: CartLine[]): string[] =>
 export const getCartSubtotal = (lines: CartLine[]): number =>
   lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)
 
-export const getCartSummary = (lines: CartLine[], couponDiscount: number): CartSummary => {
+export const getCartSummary = (lines: CartLine[], couponDiscount: number, gstRate = getLiveGstRate()): CartSummary => {
   const subtotal = getCartSubtotal(lines)
   const discount = Math.min(Math.max(Math.round(couponDiscount), 0), subtotal)
   const taxable = Math.max(subtotal - discount, 0)
   const shipping = subtotal > 1999 ? 0 : SHIPPING_FEE
-  const gst = Math.round(taxable * GST_RATE)
+  const gst = Math.round(taxable * gstRate)
   const total = taxable + shipping + gst
   return { subtotal, discount, shipping, gst, total }
 }

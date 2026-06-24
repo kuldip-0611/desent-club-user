@@ -7,6 +7,7 @@ import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { CartCouponsSection } from '@/modules/shop/components/cart-coupons-section'
 import { getCartSummary, useCartStore } from '@/store/cart-store'
+import { useGstStore } from '@/store/gst-store'
 import { useUiStore } from '@/store/ui-store'
 import { useAuthStore } from '@/store/auth-store'
 import { getLoyaltyAccount } from '@/services/loyalty.service'
@@ -18,7 +19,8 @@ export const CartDrawer = () => {
   const removeLine = useCartStore((s) => s.removeLine)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const couponDiscount = useCartStore((s) => s.couponDiscount)
-  const summary = useMemo(() => getCartSummary(lines, couponDiscount), [lines, couponDiscount])
+  const gstRate = useGstStore((s) => s.rate)
+  const summary = useMemo(() => getCartSummary(lines, couponDiscount, gstRate), [lines, couponDiscount, gstRate])
   const user = useAuthStore((s) => s.user)
   const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null)
 
@@ -33,7 +35,24 @@ export const CartDrawer = () => {
     <Drawer open={open} onClose={() => setOpen(false)} title="Mini cart">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
-          {lines.length === 0 ? <p className="text-sm text-slate-500">Your cart is empty.</p> : null}
+          {lines.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.674-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                </svg>
+              </div>
+              <p className="mb-1 font-semibold text-slate-800 dark:text-slate-200">Your cart is empty</p>
+              <p className="mb-5 text-xs text-slate-500">Add items to get started</p>
+              <Link
+                href="/shop"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900"
+              >
+                Browse Collection
+              </Link>
+            </div>
+          ) : null}
           {lines.map((line) => (
             <div key={line.lineId} className="rounded-xl border border-slate-200 p-3">
               <div className="flex items-start justify-between gap-2">
@@ -120,7 +139,7 @@ export const CartDrawer = () => {
                 <span>{summary.shipping === 0 ? 'Free' : `Rs. ${summary.shipping}`}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>GST (18%)</span>
+                <span>GST ({Math.round(gstRate * 100)}%)</span>
                 <span>Rs. {summary.gst}</span>
               </div>
               <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">

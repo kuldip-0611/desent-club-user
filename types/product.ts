@@ -22,7 +22,9 @@ export type Product = {
   subcategory: { slug: string; name: string } | null
   audience: ProductAudience
   price: number
+  mrp?: number
   compareAtPrice?: number
+  gstRate?: number
   rating: number
   reviewsCount: number
   tags: string[]

@@ -128,7 +128,7 @@ export type UserOrder = {
   courierName?: string | null
   trackingUrl?: string | null
   items: OrderItem[]
-  payment: { status: string; razorpayPaymentId: string | null } | null
+  payment: { status: string; method: string; razorpayPaymentId: string | null } | null
   returnRequests?: OrderReturnRequest[]
   reviews?: OrderReview[]
   actions?: OrderActions
@@ -190,7 +190,8 @@ export type ReturnRequestPayload = {
   type?: 'RETURN' | 'EXCHANGE'
   orderItemId?: string
   exchangeSize?: string
-  refundMethod?: 'BANK' | 'STORE_CREDIT'
+  refundMethod?: 'BANK' | 'STORE_CREDIT' | 'UPI'
+  upiId?: string
 }
 
 export const requestReturn = async (

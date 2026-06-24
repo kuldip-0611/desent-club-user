@@ -89,7 +89,8 @@ async function registerPush(accessToken: string): Promise<boolean> {
     if (Notification.permission !== 'granted') return
     new Notification(payload.notification?.title ?? 'Disent Club', {
       body: payload.notification?.body ?? '',
-      icon: '/icon.png',
+      icon: '/icon-192.png',
+      badge: '/badge-96.png',
     })
   })
 

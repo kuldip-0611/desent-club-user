@@ -13,18 +13,23 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging()
 
+// Handle background messages (app not in foreground)
 messaging.onBackgroundMessage((payload) => {
   const { title = 'Disent Club', body = '' } = payload.notification ?? {}
+  const link = payload.data?.link ?? '/'
+
   self.registration.showNotification(title, {
     body,
-    icon: '/icon.png',
-    badge: '/icon.png',
-    data: payload.data ?? {},
+    icon: '/icon-192.png',
+    badge: '/badge-96.png',
+    data: { link, ...(payload.data ?? {}) },
+    requireInteraction: false,
   })
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+  const link = event.notification.data?.link ?? '/'
   event.waitUntil(
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
@@ -34,13 +39,13 @@ self.addEventListener('notificationclick', (event) => {
             return client.focus()
           }
         }
-        return clients.openWindow('/')
+        return clients.openWindow(link)
       })
   )
 })
 
 // ── Cache ────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'desent-club-v3'
+const CACHE_NAME = 'desent-club-v4'
 const STATIC_ASSETS = ['/', '/products', '/manifest.json']
 
 self.addEventListener('install', (event) => {

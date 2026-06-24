@@ -437,7 +437,8 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
   type ReturnStep = 'choose' | 'refund-method' | 'exchange-item' | 'exchange-size' | 'reason'
   const [returnStep, setReturnStep] = useState<ReturnStep>('choose')
   const [returnType, setReturnType] = useState<'RETURN' | 'EXCHANGE'>('RETURN')
-  const [refundMethod, setRefundMethod] = useState<'BANK' | 'STORE_CREDIT'>('BANK')
+  const [refundMethod, setRefundMethod] = useState<'BANK' | 'STORE_CREDIT' | 'UPI'>('BANK')
+  const [upiId, setUpiId] = useState('')
   const [similarProducts, setSimilarProducts] = useState<Product[]>([])
   const [selectedItemForExchange, setSelectedItemForExchange] = useState<OrderItem | null>(null)
   const [itemSizes, setItemSizes] = useState<ItemSizesResponse | null>(null)
@@ -529,6 +530,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
     setItemSizes(null)
     setReturnType('RETURN')
     setRefundMethod('BANK')
+    setUpiId('')
     setSimilarProducts([])
     // If no items have a size just go straight to refund-method
     setReturnStep(sizedItems.length > 0 ? 'choose' : 'refund-method')
@@ -579,6 +581,10 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
       toast.error('Please select the size you want to exchange to')
       return
     }
+    if (returnType === 'RETURN' && refundMethod === 'UPI') {
+      if (!upiId.trim()) { toast.error('Please enter your UPI ID'); return }
+      if (!/^[\w.\-+]+@[\w]+$/.test(upiId.trim())) { toast.error('Invalid UPI ID format. E.g. 9876543210@paytm'); return }
+    }
     setSubmitting(true)
     try {
       const result = await requestReturn(order.id, {
@@ -587,6 +593,7 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
         orderItemId: returnType === 'EXCHANGE' ? selectedItemForExchange?.id : undefined,
         exchangeSize: returnType === 'EXCHANGE' ? exchangeSize : undefined,
         refundMethod: returnType === 'RETURN' ? refundMethod : undefined,
+        upiId: returnType === 'RETURN' && refundMethod === 'UPI' ? upiId.trim() : undefined,
       })
       toast.success(result.message)
       setShowReturn(false)
@@ -1147,37 +1154,72 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
                 <>
                   <p className="text-sm font-semibold text-slate-800">How would you like your refund?</p>
                   <p className="mt-0.5 text-xs text-slate-500">Choose the option that works best for you.</p>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="mt-3 grid grid-cols-1 gap-3">
                     <button
                       onClick={() => setRefundMethod('STORE_CREDIT')}
-                      className={`flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition ${
+                      className={`flex items-center gap-3 rounded-xl border-2 p-4 text-left transition ${
                         refundMethod === 'STORE_CREDIT'
                           ? 'border-green-500 bg-green-50'
                           : 'border-slate-200 hover:border-green-300 hover:bg-green-50'
                       }`}
                     >
                       <span className="text-2xl">⚡</span>
-                      <span className="text-sm font-semibold text-slate-800">Store Credit</span>
-                      <span className="text-xs text-slate-500">Instant · Use on next order</span>
-                      <span className="mt-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
-                        INSTANT
-                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-slate-800">Store Credit</p>
+                        <p className="text-xs text-slate-500">Instant · Use on next order</p>
+                      </div>
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">INSTANT</span>
                     </button>
-                    <button
-                      onClick={() => setRefundMethod('BANK')}
-                      className={`flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition ${
-                        refundMethod === 'BANK'
-                          ? 'border-slate-900 bg-slate-50'
-                          : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="text-2xl">🏦</span>
-                      <span className="text-sm font-semibold text-slate-800">Bank Refund</span>
-                      <span className="text-xs text-slate-500">Back to original payment method</span>
-                      <span className="mt-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                        5-7 DAYS
-                      </span>
-                    </button>
+
+                    {/* UPI option — shown for COD orders */}
+                    {order?.payment?.method === 'COD' ? (
+                      <div>
+                        <button
+                          onClick={() => setRefundMethod('UPI')}
+                          className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition ${
+                            refundMethod === 'UPI'
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                          }`}
+                        >
+                          <span className="text-2xl">📲</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-slate-800">UPI Transfer</p>
+                            <p className="text-xs text-slate-500">Refund sent to your UPI ID · 1-3 days</p>
+                          </div>
+                          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">COD REFUND</span>
+                        </button>
+                        {refundMethod === 'UPI' && (
+                          <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">Your UPI ID *</label>
+                            <input
+                              type="text"
+                              value={upiId}
+                              onChange={(e) => setUpiId(e.target.value)}
+                              placeholder="e.g. 9876543210@paytm or name@upi"
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                            />
+                            <p className="mt-1 text-[11px] text-slate-500">Admin will transfer the refund to this UPI ID after verifying your return.</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setRefundMethod('BANK')}
+                        className={`flex items-center gap-3 rounded-xl border-2 p-4 text-left transition ${
+                          refundMethod === 'BANK'
+                            ? 'border-slate-900 bg-slate-50'
+                            : 'border-slate-200 hover:border-slate-900 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-2xl">🏦</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-slate-800">Bank Refund</p>
+                          <p className="text-xs text-slate-500">Back to original payment method</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">5-7 DAYS</span>
+                      </button>
+                    )}
                   </div>
                   <div className="mt-3 flex gap-2">
                     <Button

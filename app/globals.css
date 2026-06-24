@@ -95,6 +95,15 @@ html[data-theme='dark'] .ring-slate-200 {
 
 html[data-theme='dark'] input:not([type='checkbox']):not([type='radio']),
 html[data-theme='dark'] textarea,
+/* Hide scrollbars globally */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 html[data-theme='dark'] select {
   background-color: #1e293b;
   border-color: #475569;

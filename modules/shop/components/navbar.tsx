@@ -9,6 +9,7 @@ import { Heart, Menu, Moon, Search, ShoppingBag, Sun, User, X } from 'lucide-rea
 import { useQuery } from '@tanstack/react-query'
 import { MAIN_NAV } from '@/constants/navigation'
 import { getCartCount, useCartStore } from '@/store/cart-store'
+import { useFlashSaleStore } from '@/store/flash-sale-store'
 import { useUiStore } from '@/store/ui-store'
 import { useWishlistStore } from '@/store/wishlist-store'
 import { useAuthStore } from '@/store/auth-store'
@@ -41,6 +42,8 @@ export const Navbar = () => {
   const logout = useAuthStore((s) => s.logout)
   const isDark = theme === 'dark'
   const { data: categories = [] } = useShopCategoriesQuery()
+  const hasSale = useFlashSaleStore((s) => Object.keys(s.saleMap).length > 0)
+  const navItems = MAIN_NAV.filter((item) => item.href !== '/sale' || hasSale)
 
   // Live search suggestions
   const { data: suggestions = [] } = useQuery({
@@ -120,7 +123,7 @@ export const Navbar = () => {
           </Link>
 
           <nav className="hidden items-center gap-6 lg:flex">
-            {MAIN_NAV.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -447,7 +450,7 @@ export const Navbar = () => {
                   )}
                 </div>
 
-                {MAIN_NAV.map((item) => (
+                {navItems.map((item) => (
                   <Link key={item.href} href={item.href} className={mobileLinkClass} onClick={closeMobile}>
                     {item.label}
                   </Link>

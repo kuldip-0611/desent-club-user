@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/store/cart-store'
 import { useWishlistStore } from '@/store/wishlist-store'
+import { useFlashSaleStore } from '@/store/flash-sale-store'
 import type { Product, ProductVariant } from '@/types/product'
 
 function getCompareIds(): string[] {
@@ -29,10 +30,12 @@ type ProductCardProps = {
 // Quick-pick modal — choose size & color before adding to cart
 function QuickPickModal({
   product,
+  salePrice,
   onClose,
   onAdd,
 }: {
   product: Product
+  salePrice: number | null
   onClose: () => void
   onAdd: (variant: ProductVariant) => void
 }) {
@@ -70,7 +73,10 @@ function QuickPickModal({
             </div>
             <div>
               <p className="font-semibold text-slate-900 leading-tight">{product.name}</p>
-              <p className="mt-0.5 text-sm font-bold text-slate-700">₹{product.price}</p>
+              <div className="mt-0.5 flex items-center gap-1.5">
+              <p className="text-sm font-bold text-slate-900">₹{salePrice ?? product.price}</p>
+              {salePrice && <p className="text-xs text-slate-400 line-through">₹{product.price}</p>}
+            </div>
             </div>
           </div>
           <button onClick={onClose} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
@@ -174,6 +180,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const lines = useCartStore((s) => s.lines)
   const toggleWishlist = useWishlistStore((s) => s.toggle)
   const has = useWishlistStore((s) => s.has(product.id))
+  const saleInfo = useFlashSaleStore((s) => s.saleMap[product.id] ?? null)
+  const salePrice = saleInfo ? Math.round(product.price * (100 - saleInfo.discountPercent)) / 100 : null
   const [showQuickPick, setShowQuickPick] = useState(false)
 
   const inCartQty = lines
@@ -232,7 +240,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       image: product.images[0],
       size: variant.size,
       color: variant.colorName,
-      unitPrice: product.price,
+      unitPrice: salePrice ?? product.price,
       quantity: 1,
     })
     toast.success(`${product.name} added to cart`)
@@ -246,7 +254,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         transition={{ duration: 0.2 }}
         className="group overflow-hidden rounded-2xl border border-slate-200 bg-white"
       >
-        <Link href={`/products/${product.slug}`} className="relative block aspect-[4/5] overflow-hidden">
+        <Link
+          href={saleInfo ? `/products/${product.slug}?from=sale&saleId=${saleInfo.saleId}` : `/products/${product.slug}`}
+          className="relative block aspect-[4/5] overflow-hidden"
+        >
           <Image
             src={product.images[0]}
             alt={product.name}
@@ -255,13 +266,24 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
             className="object-cover transition duration-500 group-hover:scale-105"
           />
-          {isOutOfStock ? (
+          {/* Sale badge — top-left */}
+          {saleInfo && (
+            <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-black shadow">
+              ⚡ {saleInfo.discountPercent}% off
+            </span>
+          )}
+          {/* Stock badge — bottom-left when no sale badge occupying top */}
+          {!saleInfo && isOutOfStock ? (
             <span className="absolute left-2 top-2 rounded-full bg-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
               Out of stock
             </span>
-          ) : isLowStock ? (
+          ) : !saleInfo && isLowStock ? (
             <span className="absolute left-2 top-2 rounded-full bg-orange-500/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
               Only {totalStock} left
+            </span>
+          ) : saleInfo && isOutOfStock ? (
+            <span className="absolute right-2 top-2 rounded-full bg-slate-800/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+              Out of stock
             </span>
           ) : null}
         </Link>
@@ -293,9 +315,13 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             </button>
           </div>
           <p className="hidden text-xs text-slate-500 sm:line-clamp-2">{product.description}</p>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-900 sm:text-sm">₹{product.price}</span>
-            {product.compareAtPrice ? <span className="text-[10px] text-slate-400 line-through sm:text-xs">₹{product.compareAtPrice}</span> : null}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-900 sm:text-sm">₹{salePrice ?? product.price}</span>
+            {salePrice ? (
+              <span className="text-[10px] text-slate-400 line-through sm:text-xs">₹{product.price}</span>
+            ) : product.compareAtPrice ? (
+              <span className="text-[10px] text-slate-400 line-through sm:text-xs">₹{product.compareAtPrice}</span>
+            ) : null}
             {product.isNewArrival ? <Badge className="hidden sm:inline-flex">New</Badge> : null}
             {inCartQty > 0 ? <Badge className="hidden bg-emerald-100 text-emerald-700 sm:inline-flex">In cart: {inCartQty}</Badge> : null}
           </div>
@@ -315,7 +341,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
             <div className="flex gap-1.5 sm:gap-2">
               <Link
-                href={`/products/${product.slug}`}
+                href={saleInfo ? `/products/${product.slug}?from=sale&saleId=${saleInfo.saleId}` : `/products/${product.slug}`}
                 className="flex flex-1 items-center justify-center rounded-xl border border-slate-200 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 sm:py-2 sm:text-xs"
               >
                 View
@@ -341,6 +367,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         {showQuickPick && (
           <QuickPickModal
             product={product}
+            salePrice={salePrice}
             onClose={() => setShowQuickPick(false)}
             onAdd={handleAdd}
           />

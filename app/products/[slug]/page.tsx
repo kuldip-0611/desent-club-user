@@ -7,6 +7,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').rep
 
 type ProductDetailRouteProps = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ from?: string; saleId?: string }>
 }
 
 export async function generateMetadata({ params }: ProductDetailRouteProps): Promise<Metadata> {
@@ -61,8 +62,9 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
   }
 }
 
-export default async function ProductDetailRoute({ params }: ProductDetailRouteProps) {
+export default async function ProductDetailRoute({ params, searchParams }: ProductDetailRouteProps) {
   const { slug } = await params
+  const { from, saleId } = await searchParams
 
   // Fetch product for JSON-LD structured data
   let jsonLd: Record<string, unknown> | null = null
@@ -144,7 +146,7 @@ export default async function ProductDetailRoute({ params }: ProductDetailRouteP
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
         />
       )}
-      <ProductDetailPageModule slug={slug} />
+      <ProductDetailPageModule slug={slug} fromSale={from === 'sale'} saleId={saleId} />
     </StoreShell>
   )
 }

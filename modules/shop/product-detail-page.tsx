@@ -15,10 +15,14 @@ import { apiClient } from '@/services/api/client'
 import type { ProductVariant } from '@/types/product'
 import { useRecentlyViewed } from '@/hooks/use-recently-viewed'
 import { FlashSaleCountdown } from '@/components/ui/flash-sale-countdown'
+import { useFlashSaleStore } from '@/store/flash-sale-store'
+import { useGstStore } from '@/store/gst-store'
 import { toast } from 'react-hot-toast'
 
 type ProductDetailPageProps = {
   slug: string
+  fromSale?: boolean
+  saleId?: string
 }
 
 type SizeChartData = {
@@ -36,12 +40,42 @@ const StarRow = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' }
   </p>
 )
 
-export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
+export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetailPageProps) => {
   const addLine = useCartStore((s) => s.addLine)
   const user = useAuthStore((s) => s.user)
   const { data: product, isLoading } = useProductQuery(slug)
   const { data: related } = useRelatedProductsQuery(product?.slug)
   const { addViewed } = useRecentlyViewed()
+
+  const gstRate = useGstStore((s) => s.rate)
+
+  // Flash sale overlay from Zustand (populated at app boot)
+  const storeSaleInfo = useFlashSaleStore((s) => product ? (s.saleMap[product.id] ?? null) : null)
+  // Merge: API flashSale takes priority (most specific), then Zustand store sale, then nothing
+  const activeSale = product?.flashSale ?? (storeSaleInfo ? {
+    saleId: storeSaleInfo.saleId,
+    saleTitle: storeSaleInfo.saleTitle,
+    discountPercent: storeSaleInfo.discountPercent,
+    salePrice: Math.round(product!.price * (100 - storeSaleInfo.discountPercent)) / 100,
+    endsAt: null as string | null,
+    label: storeSaleInfo.saleTitle,
+  } : null)
+  // Best discount %: max of flash sale, compare-at discount, product's own discountPercent
+  const compareDiscount = product?.compareAtPrice
+    ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+    : 0
+  const flashDiscount = storeSaleInfo?.discountPercent
+    ?? (product?.flashSale && product.price > 0
+      ? Math.round(((product.price - product.flashSale.salePrice) / product.price) * 100)
+      : 0)
+  const bestDiscount = Math.max(flashDiscount, compareDiscount)
+  // Effective display price
+  const displayPrice = activeSale
+    ? activeSale.salePrice
+    : product?.price ?? 0
+  const strikePrice = activeSale
+    ? product?.price
+    : product?.compareAtPrice ?? null
 
   const [activeImage, setActiveImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
@@ -404,8 +438,19 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
         {/* ── Product info ── */}
         <div className="space-y-4">
           <nav className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-            <Link href="/products" className="hover:text-slate-600">Products</Link>
-            <span>/</span>
+            {fromSale ? (
+              <>
+                <Link href={saleId ? `/sale/${saleId}` : '/sale'} className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20 dark:hover:bg-amber-400/20">
+                  <ChevronLeft className="h-3 w-3" /> Back to Sale
+                </Link>
+                <span>/</span>
+              </>
+            ) : (
+              <>
+                <Link href="/products" className="hover:text-slate-600">Products</Link>
+                <span>/</span>
+              </>
+            )}
             <Link href={`/products?category=${product.category.slug}`} className="hover:text-slate-600">
               {product.category.name}
             </Link>
@@ -434,29 +479,37 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
 
           <p className="text-sm text-slate-600">{product.description}</p>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {activeSale && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-sm font-bold text-black">
+                ⚡ {bestDiscount}% off
+              </span>
+            )}
             <span className="text-2xl font-bold">
-              Rs. {product.flashSale ? product.flashSale.salePrice : product.price}
+              ₹{displayPrice.toLocaleString('en-IN')}
             </span>
-            {(product.flashSale || product.compareAtPrice) ? (
+            {strikePrice ? (
               <span className="text-sm text-slate-400 line-through">
-                Rs. {product.flashSale ? product.price : product.compareAtPrice}
+                ₹{strikePrice.toLocaleString('en-IN')}
               </span>
             ) : null}
-            {product.compareAtPrice && !product.flashSale ? (
+            {!activeSale && bestDiscount > 0 ? (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
-                {Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}% off
+                {bestDiscount}% off
               </span>
             ) : null}
           </div>
+          <p className="text-xs text-slate-400">
+            Incl. {Math.round(gstRate * 100)}% GST
+          </p>
 
-          {/* Flash sale countdown */}
-          {product.flashSale && new Date(product.flashSale.endsAt) > new Date() && (
+          {/* Flash sale countdown — only if API provided an endsAt */}
+          {activeSale?.endsAt && new Date(activeSale.endsAt) > new Date() && (
             <FlashSaleCountdown
-              endsAt={product.flashSale.endsAt}
-              salePrice={product.flashSale.salePrice}
+              endsAt={activeSale.endsAt}
+              salePrice={displayPrice}
               originalPrice={product.price}
-              label={product.flashSale.label ?? 'Flash Sale'}
+              label={activeSale.label ?? 'Flash Sale'}
             />
           )}
 
@@ -585,7 +638,7 @@ export const ProductDetailPageModule = ({ slug }: ProductDetailPageProps) => {
                   image: displayImages[0] ?? product.images[0],
                   size: variant.size,
                   color: variant.colorName,
-                  unitPrice: product.price,
+                  unitPrice: displayPrice,
                   quantity: 1,
                 })
               }}
