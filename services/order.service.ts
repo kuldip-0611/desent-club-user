@@ -93,6 +93,8 @@ export type OrderReturnRequest = {
 
 export type OrderActions = {
   canCancel: boolean
+  canEditSize: boolean
+  canChangeAddress: boolean
   canReturn: boolean
   canReview: boolean
   returnStatus: string | null
@@ -246,6 +248,18 @@ export const submitNpsSurvey = async (
   comment?: string,
 ): Promise<void> => {
   await apiClient.post(`/orders/my/${orderId}/nps`, { score, comment })
+}
+
+export const updateOrderItemSize = async (
+  orderId: string,
+  itemId: string,
+  size: string,
+): Promise<{ message: string }> => {
+  const { data } = await apiClient.patch<{ message: string }>(
+    `/orders/my/${orderId}/items/${itemId}/size`,
+    { size },
+  )
+  return data
 }
 
 export const updateOrderAddress = async (

@@ -25,6 +25,8 @@ import {
   requestReturn,
   submitOrderReviews,
   submitNpsSurvey,
+  updateOrderAddress,
+  updateOrderItemSize,
   type CancellationReason,
   type CancelOrderPayload,
   type ItemSizesResponse,
@@ -34,9 +36,8 @@ import {
   type UserOrder,
 } from '@/services/order.service'
 import { listProducts } from '@/services/product.service'
-import { updateOrderAddress } from '@/services/order.service'
 import { listMyAddresses } from '@/services/address.service'
-import type { UserAddress } from '@/types/address'
+
 import type { Product } from '@/types/product'
 
 type OrderDetailPageModuleProps = {
@@ -52,100 +53,271 @@ const formatDate = (iso: string) =>
     minute: '2-digit',
   })
 
+// ── Edit Size Modal (pre-shipment) ─────────────────────────────────────────
+
+function EditSizeModal({
+  orderId,
+  items,
+  onSuccess,
+  onClose,
+}: {
+  orderId: string
+  items: OrderItem[]
+  onSuccess: () => void
+  onClose: () => void
+}) {
+  const sizedItems = items.filter((i) => !!i.size)
+  const [selectedItem, setSelectedItem] = useState<OrderItem | null>(sizedItems.length === 1 ? sizedItems[0] : null)
+  const [availableSizes, setAvailableSizes] = useState<ItemSizesResponse | null>(null)
+  const [loadingSizes, setLoadingSizes] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!selectedItem) return
+    setLoadingSizes(true)
+    setAvailableSizes(null)
+    getOrderItemSizes(orderId, selectedItem.id)
+      .then(setAvailableSizes)
+      .catch(() => toast.error('Could not load sizes'))
+      .finally(() => setLoadingSizes(false))
+  }, [selectedItem, orderId])
+
+  const handlePickSize = async (size: string) => {
+    if (!selectedItem) return
+    setSaving(true)
+    try {
+      const result = await updateOrderItemSize(orderId, selectedItem.id, size)
+      toast.success(result.message)
+      onSuccess()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update size')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="w-full rounded-2xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-slate-900">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm text-blue-600">↕</span>
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Change size</p>
+          <p className="text-xs text-slate-500">Pick a new size — your order stays the same, no cancellation needed.</p>
+        </div>
+      </div>
+
+      {/* Item picker — only shown when multiple sized items */}
+      {sizedItems.length > 1 && !selectedItem && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate-700">Which item do you want to resize?</p>
+          {sizedItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setSelectedItem(item)}
+              className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-blue-400 hover:bg-blue-50"
+            >
+              {item.product.images[0] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.product.images[0].path} alt={item.product.name} className="h-10 w-10 rounded-lg object-cover" />
+              )}
+              <div>
+                <p className="text-sm font-medium">{item.product.name}</p>
+                <p className="text-xs text-slate-500">Current size: <strong>{item.size}</strong></p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Size picker */}
+      {selectedItem && (
+        <>
+          {sizedItems.length > 1 && (
+            <p className="mb-3 text-xs text-slate-500">
+              Changing size for: <strong>{selectedItem.product.name}</strong> (currently <strong>{selectedItem.size}</strong>)
+            </p>
+          )}
+          {sizedItems.length === 1 && (
+            <p className="mb-3 text-xs text-slate-500">
+              Current size: <strong>{selectedItem.size}</strong>
+            </p>
+          )}
+
+          {loadingSizes ? (
+            <p className="py-4 text-center text-sm text-slate-400">Loading available sizes…</p>
+          ) : availableSizes && availableSizes.availableSizes.length === 0 ? (
+            <div className="rounded-xl bg-amber-50 p-3 text-sm text-amber-700">
+              No other sizes are in stock right now.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableSizes?.availableSizes.map((s) => (
+                <button
+                  key={s.size}
+                  disabled={saving}
+                  onClick={() => void handlePickSize(s.size)}
+                  className="rounded-lg border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-50"
+                >
+                  {s.size}
+                  <span className="ml-1 text-xs font-normal opacity-70">({s.quantity})</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <Button variant="outline" className="mt-4" onClick={onClose} disabled={saving}>
+        Cancel
+      </Button>
+    </div>
+  )
+}
+
+// ── Change Address Modal (pre-shipment) ────────────────────────────────────
+
+function ChangeAddressModal({
+  orderId,
+  onSuccess,
+  onClose,
+}: {
+  orderId: string
+  onSuccess: () => void
+  onClose: () => void
+}) {
+  const [addresses, setAddresses] = useState<import('@/types/address').UserAddress[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedId, setSelectedId] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    listMyAddresses()
+      .then((list) => {
+        setAddresses(list)
+        const def = list.find((a) => a.isDefault)
+        if (def) setSelectedId(def.id)
+      })
+      .catch(() => undefined)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleSave = async () => {
+    if (!selectedId) return
+    setSaving(true)
+    try {
+      const result = await updateOrderAddress(orderId, selectedId)
+      toast.success(result.message)
+      onSuccess()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update address')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm text-slate-600">📍</span>
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Change delivery address</p>
+          <p className="text-xs text-slate-500">Select a saved address — your order won&apos;t be cancelled.</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="py-4 text-center text-sm text-slate-400">Loading addresses…</p>
+      ) : addresses.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          No saved addresses.{' '}
+          <a href="/profile/addresses" className="font-medium underline">Add one</a> then come back.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {addresses.map((addr) => (
+            <label
+              key={addr.id}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition ${
+                selectedId === addr.id ? 'border-slate-900 bg-white ring-1 ring-slate-300' : 'border-slate-200 bg-white hover:border-slate-400'
+              }`}
+            >
+              <input type="radio" name="addr" value={addr.id} checked={selectedId === addr.id} onChange={() => setSelectedId(addr.id)} className="mt-0.5 accent-slate-900" />
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-800">
+                  {addr.fullName}
+                  {addr.isDefault && <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">Default</span>}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}, {addr.city}, {addr.state} – {addr.pincode}
+                </p>
+                <p className="text-xs text-slate-500">{addr.phone}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button className="flex-1" disabled={!selectedId || saving} onClick={() => void handleSave()}>
+          {saving ? 'Updating…' : 'Update Address'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Dynamic Cancel Order Modal ─────────────────────────────────────────────
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
 
 function CancelOrderModal({
-  orderId,
   submitting,
   orderItems,
   onConfirm,
   onBack,
-  onAddressUpdated,
+  onEditSize,
+  onChangeAddress,
 }: {
   orderId: string
   submitting: boolean
   orderItems: OrderItem[]
   onConfirm: (payload: CancelOrderPayload) => void
   onBack: () => void
+  onEditSize: () => void
+  onChangeAddress: () => void
   onAddressUpdated: () => void
 }) {
   const [reasons, setReasons] = useState<CancellationReason[]>([])
   const [selectedReason, setSelectedReason] = useState('')
   const [otherText, setOtherText] = useState('')
-  const [requestedSize, setRequestedSize] = useState('')
-  const [requestedColor, setRequestedColor] = useState('')
 
-  // Address change flow
-  const [addresses, setAddresses] = useState<UserAddress[]>([])
-  const [addressesLoading, setAddressesLoading] = useState(false)
-  const [selectedAddressId, setSelectedAddressId] = useState('')
-  const [addressSaving, setAddressSaving] = useState(false)
-
-  const isVariantChange = selectedReason.toLowerCase().includes('size') || selectedReason.toLowerCase().includes('color')
-  const isAddressChange = selectedReason.toLowerCase().includes('address')
   const isOther = selectedReason === 'Other'
 
   const firstItem = orderItems[0]
 
   useEffect(() => {
-    getCancellationReasons().then(setReasons).catch(() => {
+    getCancellationReasons().then((list) => {
+      // Filter out size/address reasons — those are now handled by dedicated flows
+      setReasons(list.filter((r) => !r.label.toLowerCase().includes('size') && !r.label.toLowerCase().includes('address')))
+    }).catch(() => {
       setReasons([
         { id: '1', label: 'Changed my mind' },
         { id: '2', label: 'Found a better price elsewhere' },
         { id: '3', label: 'Ordered by mistake' },
         { id: '4', label: 'Delivery time is too long' },
-        { id: '5', label: 'Want to change size or color' },
-        { id: '6', label: 'Want to change delivery address' },
         { id: '7', label: 'Product no longer needed' },
         { id: '8', label: 'Other' },
       ])
     })
   }, [])
 
-  // Load addresses when address-change reason is selected
-  useEffect(() => {
-    if (!isAddressChange) return
-    setAddressesLoading(true)
-    listMyAddresses()
-      .then((list) => {
-        setAddresses(list)
-        const def = list.find((a) => a.isDefault)
-        if (def) setSelectedAddressId(def.id)
-      })
-      .catch(() => undefined)
-      .finally(() => setAddressesLoading(false))
-  }, [isAddressChange])
-
-  const handleUpdateAddress = async () => {
-    if (!selectedAddressId) return
-    setAddressSaving(true)
-    try {
-      const result = await updateOrderAddress(orderId, selectedAddressId)
-      toast.success(result.message)
-      onAddressUpdated()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update address')
-    } finally {
-      setAddressSaving(false)
-    }
-  }
-
   const canSubmit =
     selectedReason !== '' &&
-    (!isOther || otherText.trim().length >= 3) &&
-    (!isVariantChange || requestedSize !== '' || requestedColor !== '') &&
-    !isAddressChange  // address-change uses a different action, not the cancel confirm
+    (!isOther || otherText.trim().length >= 3)
 
   const handleConfirm = () => {
     const reason = isOther ? `Other: ${otherText.trim()}` : selectedReason
-    onConfirm({
-      reason,
-      variantChange: isVariantChange,
-      requestedSize: isVariantChange && requestedSize ? requestedSize : undefined,
-      requestedColor: isVariantChange && requestedColor ? requestedColor : undefined,
-    })
+    onConfirm({ reason })
   }
 
   return (
@@ -155,9 +327,35 @@ function CancelOrderModal({
         <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-sm text-red-600">✕</span>
         <div>
           <p className="text-sm font-semibold text-slate-900">Cancel this order?</p>
-          <p className="text-xs text-slate-500">Select a reason — some issues can be fixed without cancelling.</p>
+          <p className="text-xs text-slate-500">Select a reason below.</p>
         </div>
       </div>
+
+      {/* Quick-fix nudges — redirect size/address to dedicated flows */}
+      <div className="mb-3 space-y-2">
+        <button
+          onClick={onEditSize}
+          className="flex w-full items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-left text-sm transition hover:border-blue-400"
+        >
+          <span className="text-base">↕</span>
+          <div>
+            <p className="font-medium text-blue-800">Wrong size? Change it here →</p>
+            <p className="text-xs text-blue-600">No cancellation needed — update the size directly</p>
+          </div>
+        </button>
+        <button
+          onClick={onChangeAddress}
+          className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm transition hover:border-slate-400"
+        >
+          <span className="text-base">📍</span>
+          <div>
+            <p className="font-medium text-slate-800">Wrong address? Update it here →</p>
+            <p className="text-xs text-slate-500">No cancellation needed — change the delivery address</p>
+          </div>
+        </button>
+      </div>
+
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Or cancel for another reason:</p>
 
       {/* Reason list */}
       {reasons.length === 0 ? (
@@ -181,9 +379,6 @@ function CancelOrderModal({
                 onChange={() => {
                   setSelectedReason(r.label)
                   setOtherText('')
-                  setRequestedSize('')
-                  setRequestedColor('')
-                  setSelectedAddressId('')
                 }}
                 className="accent-red-600"
               />
@@ -204,137 +399,19 @@ function CancelOrderModal({
         />
       )}
 
-      {/* Variant change — size & color picker */}
-      {isVariantChange && (
-        <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
-          <p className="text-xs font-semibold text-blue-800">Which size / color would you like instead?</p>
-          {firstItem && (
-            <p className="text-xs text-blue-600">
-              Current order: <strong>{firstItem.size}</strong> · <strong>{firstItem.color}</strong>
-            </p>
-          )}
-          <div>
-            <p className="mb-1.5 text-xs font-medium text-slate-700">New size</p>
-            <div className="flex flex-wrap gap-2">
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setRequestedSize(requestedSize === s ? '' : s)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                    requestedSize === s
-                      ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-slate-300 text-slate-700 hover:border-slate-400'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-1.5 text-xs font-medium text-slate-700">New color (optional)</p>
-            <input
-              type="text"
-              placeholder="e.g. Black, Navy, White…"
-              value={requestedColor}
-              onChange={(e) => setRequestedColor(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-          <p className="text-[11px] text-blue-600">
-            Our team will contact you to arrange the exchange after cancellation.
-          </p>
-        </div>
-      )}
-
-      {/* Address change — inline address picker */}
-      {isAddressChange && (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-          <p className="text-xs font-semibold text-slate-800">
-            📍 Change delivery address — no need to cancel!
-          </p>
-          <p className="text-xs text-slate-600">
-            Select a saved address below and we&apos;ll update your order instantly.
-          </p>
-          {addressesLoading ? (
-            <p className="text-xs text-slate-400">Loading your addresses…</p>
-          ) : addresses.length === 0 ? (
-            <p className="text-xs text-slate-500">
-              No saved addresses found.{' '}
-              <a href="/profile/addresses" className="font-medium text-slate-900 underline">
-                Add one
-              </a>{' '}
-              then come back.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {addresses.map((addr) => (
-                <label
-                  key={addr.id}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition ${
-                    selectedAddressId === addr.id
-                      ? 'border-slate-900 bg-white ring-1 ring-slate-300'
-                      : 'border-slate-200 bg-white hover:border-slate-400'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="address-pick"
-                    value={addr.id}
-                    checked={selectedAddressId === addr.id}
-                    onChange={() => setSelectedAddressId(addr.id)}
-                    className="mt-0.5 accent-slate-900"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-800">
-                      {addr.fullName}
-                      {addr.isDefault && (
-                        <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                          Default
-                        </span>
-                      )}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}, {addr.city}, {addr.state} – {addr.pincode}
-                    </p>
-                    <p className="text-xs text-slate-500">{addr.phone}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={onBack} disabled={addressSaving}>
-              Keep original
-            </Button>
-            <Button
-              className="flex-1"
-              disabled={!selectedAddressId || addressSaving}
-              onClick={() => void handleUpdateAddress()}
-            >
-              {addressSaving ? 'Updating…' : 'Update & Keep Order'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Actions — only shown when reason is NOT address change */}
-      {!isAddressChange && (
-        <div className="mt-4 flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={onBack} disabled={submitting}>
-            Keep order
-          </Button>
-          <Button
-            className="flex-1 bg-red-600 hover:bg-red-700"
-            disabled={!canSubmit || submitting}
-            onClick={handleConfirm}
-          >
-            {submitting ? 'Cancelling…' : isVariantChange ? 'Cancel & Request Change' : 'Yes, cancel order'}
-          </Button>
-        </div>
-      )}
+      {/* Actions */}
+      <div className="mt-4 flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onBack} disabled={submitting}>
+          Keep order
+        </Button>
+        <Button
+          className="flex-1 bg-red-600 hover:bg-red-700"
+          disabled={!canSubmit || submitting}
+          onClick={handleConfirm}
+        >
+          {submitting ? 'Cancelling…' : 'Yes, cancel order'}
+        </Button>
+      </div>
     </div>
   )
 }
@@ -348,6 +425,8 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
   const [returnReason, setReturnReason] = useState('')
   const [showCancel, setShowCancel] = useState(false)
   const [showReturn, setShowReturn] = useState(false)
+  const [showEditSize, setShowEditSize] = useState(false)
+  const [showChangeAddress, setShowChangeAddress] = useState(false)
 
   // Size exchange state
   // 'choose' → pick return or exchange
@@ -962,6 +1041,14 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
         </section>
       )}
 
+      {/* ── Shipped: size/address change blocked ── */}
+      {order.status === 'SHIPPED' || order.status === 'PROCESSING' ? (
+        <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-semibold">Your order is on its way</p>
+          <p className="mt-0.5 text-xs">Size or address changes are not possible once shipped. If the size is wrong after delivery, use <strong>Request exchange</strong>.</p>
+        </div>
+      ) : null}
+
       <section className="flex flex-wrap gap-3">
         {/* Invoice download */}
         <button
@@ -983,6 +1070,24 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
           {invoiceLoading ? 'Downloading…' : 'Download Invoice'}
         </button>
 
+        {/* Edit Size — pre-shipment */}
+        {order.actions?.canEditSize ? (
+          showEditSize ? null : (
+            <Button variant="outline" onClick={() => { setShowCancel(false); setShowChangeAddress(false); setShowEditSize(true) }}>
+              ↕ Change size
+            </Button>
+          )
+        ) : null}
+
+        {/* Change Address — pre-shipment */}
+        {order.actions?.canChangeAddress ? (
+          showChangeAddress ? null : (
+            <Button variant="outline" onClick={() => { setShowCancel(false); setShowEditSize(false); setShowChangeAddress(true) }}>
+              📍 Change address
+            </Button>
+          )
+        ) : null}
+
         {order.actions?.canCancel ? (
           showCancel ? (
             <CancelOrderModal
@@ -991,10 +1096,12 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
               orderItems={order.items}
               onConfirm={(payload) => void handleCancel(payload)}
               onBack={() => { setShowCancel(false); setCancelPayload({}) }}
+              onEditSize={() => { setShowCancel(false); setShowEditSize(true) }}
+              onChangeAddress={() => { setShowCancel(false); setShowChangeAddress(true) }}
               onAddressUpdated={() => { setShowCancel(false); void loadOrder() }}
             />
           ) : (
-            <Button variant="outline" onClick={() => setShowCancel(true)}>
+            <Button variant="outline" onClick={() => { setShowEditSize(false); setShowChangeAddress(false); setShowCancel(true) }}>
               Cancel order
             </Button>
           )
@@ -1226,6 +1333,25 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
           )
         ) : null}
       </section>
+
+      {/* ── Edit Size Modal ── */}
+      {showEditSize && (
+        <EditSizeModal
+          orderId={orderId}
+          items={order.items}
+          onSuccess={() => { setShowEditSize(false); void loadOrder() }}
+          onClose={() => setShowEditSize(false)}
+        />
+      )}
+
+      {/* ── Change Address Modal ── */}
+      {showChangeAddress && (
+        <ChangeAddressModal
+          orderId={orderId}
+          onSuccess={() => { setShowChangeAddress(false); void loadOrder() }}
+          onClose={() => setShowChangeAddress(false)}
+        />
+      )}
 
       {/* ── Similar Products (shown after return submitted) ── */}
       {similarProducts.length > 0 && (
