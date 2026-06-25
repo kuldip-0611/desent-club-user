@@ -302,7 +302,7 @@ export const CheckoutPageModule = () => {
         {user && (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-700">Rewards & Savings</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Rewards & Savings</p>
               {loyaltyLoading && (
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-yellow-400 border-t-transparent" />
               )}
@@ -310,25 +310,27 @@ export const CheckoutPageModule = () => {
 
             {/* Loyalty points */}
             <div className={`rounded-xl border p-3 transition ${
-              applyLoyalty ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200'
+              applyLoyalty
+                ? 'border-yellow-400 bg-yellow-50 dark:border-yellow-500 dark:bg-yellow-950/40'
+                : 'border-slate-200 dark:border-slate-700'
             }`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-100">
-                    <Star className="h-4 w-4 text-yellow-600" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50">
+                    <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <div className="min-w-0">
                     {loyaltyLoading ? (
-                      <div className="h-4 w-24 animate-pulse rounded bg-slate-200" />
+                      <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     ) : (
                       <>
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
                           {loyaltyBalance.toLocaleString()} pts
-                          <span className="ml-1.5 text-xs font-normal text-slate-500">
+                          <span className="ml-1.5 text-xs font-normal text-slate-500 dark:text-slate-400">
                             = ₹{(loyaltyBalance * rupeePerPoint).toFixed(0)} off
                           </span>
                         </p>
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
                           {canUseLoyalty
                             ? `Up to ₹${Math.min(loyaltyBalance * rupeePerPoint, (summary.total * maxRedeemPercent) / 100).toFixed(0)} off this order`
                             : `Need ${minPoints} pts to redeem · earn more by shopping`}
@@ -344,21 +346,21 @@ export const CheckoutPageModule = () => {
                       onClick={() => setApplyLoyalty((v) => !v)}
                       className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
                         applyLoyalty
-                          ? 'bg-yellow-500 text-white'
-                          : 'border border-yellow-400 text-yellow-700 hover:bg-yellow-50'
+                          ? 'bg-yellow-500 text-white dark:bg-yellow-400 dark:text-yellow-950'
+                          : 'border border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-500 dark:text-yellow-400 dark:hover:bg-yellow-900/30'
                       }`}
                     >
                       {applyLoyalty ? '✓ Applied' : 'Apply'}
                     </button>
                   ) : (
-                    <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
+                    <span className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                       {loyaltyBalance} / {minPoints} pts
                     </span>
                   )
                 )}
               </div>
               {applyLoyalty && (
-                <div className="mt-2 rounded-lg bg-yellow-100 px-3 py-1.5 text-xs text-yellow-800 font-medium">
+                <div className="mt-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 px-3 py-1.5 text-xs text-yellow-800 dark:text-yellow-300 font-medium">
                   🏆 Saving ₹{loyaltyDiscountAmount.toFixed(2)} · using {loyaltyPointsToUse} pts (max {maxRedeemPercent}% of order)
                 </div>
               )}
@@ -366,15 +368,19 @@ export const CheckoutPageModule = () => {
 
             {/* Store credit */}
             {storeCreditBalance > 0 && (
-              <div className={`rounded-xl border p-3 transition ${applyStoreCredit ? 'border-green-400 bg-green-50' : 'border-slate-200'}`}>
+              <div className={`rounded-xl border p-3 transition ${
+                applyStoreCredit
+                  ? 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-950/40'
+                  : 'border-slate-200 dark:border-slate-700'
+              }`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
-                      <Zap className="h-4 w-4 text-green-600" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
+                      <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">₹{storeCreditBalance.toFixed(2)} Store Credit</p>
-                      <p className="text-[10px] text-slate-500">From a previous return</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">₹{storeCreditBalance.toFixed(2)} Store Credit</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">From a previous return</p>
                     </div>
                   </div>
                   <button
@@ -382,15 +388,15 @@ export const CheckoutPageModule = () => {
                     onClick={() => setApplyStoreCredit((v) => !v)}
                     className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
                       applyStoreCredit
-                        ? 'bg-green-600 text-white'
-                        : 'border border-green-400 text-green-700 hover:bg-green-100'
+                        ? 'bg-green-600 text-white dark:bg-green-500'
+                        : 'border border-green-400 text-green-700 hover:bg-green-100 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/30'
                     }`}
                   >
                     {applyStoreCredit ? '✓ Applied' : 'Apply'}
                   </button>
                 </div>
                 {applyStoreCredit && (
-                  <div className="mt-2 rounded-lg bg-green-100 px-3 py-1.5 text-xs text-green-800 font-medium">
+                  <div className="mt-2 rounded-lg bg-green-100 dark:bg-green-900/40 px-3 py-1.5 text-xs text-green-800 dark:text-green-300 font-medium">
                     ⚡ Saving ₹{storeCreditToApply.toFixed(2)} with store credit
                   </div>
                 )}
@@ -398,18 +404,18 @@ export const CheckoutPageModule = () => {
             )}
 
             {/* Gift card */}
-            <div className="rounded-xl border border-slate-200 p-3">
-              <p className="text-sm font-semibold text-slate-700 mb-2">Gift Card</p>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Gift Card</p>
               {giftCardApplied ? (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-slate-900 font-mono">{giftCardApplied.code}</p>
-                    <p className="text-xs text-slate-500">₹{giftCardToApply.toFixed(2)} will be applied</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono">{giftCardApplied.code}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">₹{giftCardToApply.toFixed(2)} will be applied</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setGiftCardApplied(null); setGiftCardInput('') }}
-                    className="text-xs text-red-600 hover:underline"
+                    className="text-xs text-red-600 dark:text-red-400 hover:underline"
                   >
                     Remove
                   </button>
@@ -418,7 +424,7 @@ export const CheckoutPageModule = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-slate-900"
+                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-transparent dark:text-slate-100 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-slate-900 dark:focus:border-slate-400 dark:placeholder-slate-500"
                     placeholder="XXXX-XXXX-XXXX"
                     value={giftCardInput}
                     onChange={(e) => setGiftCardInput(e.target.value.toUpperCase())}
@@ -427,7 +433,7 @@ export const CheckoutPageModule = () => {
                     type="button"
                     disabled={giftCardChecking || !giftCardInput.trim()}
                     onClick={() => void handleCheckGiftCard()}
-                    className="rounded-lg border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-50 transition"
+                    className="rounded-lg border border-slate-900 bg-slate-900 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700 dark:hover:bg-slate-300 disabled:opacity-50 transition"
                   >
                     {giftCardChecking ? '…' : 'Apply'}
                   </button>
