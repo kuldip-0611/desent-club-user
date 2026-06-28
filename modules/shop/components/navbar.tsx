@@ -244,9 +244,8 @@ export const Navbar = () => {
                 </span>
               ) : null}
             </Link>
-            <button
-              type="button"
-              onClick={() => setCartDrawer(true)}
+            <Link
+              href="/cart"
               className={cn('relative rounded-full p-2', isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-100')}
             >
               <ShoppingBag className="h-5 w-5" />
@@ -255,7 +254,7 @@ export const Navbar = () => {
                   {count}
                 </span>
               ) : null}
-            </button>
+            </Link>
             <button
               type="button"
               onClick={toggleTheme}
@@ -459,7 +458,7 @@ export const Navbar = () => {
                   <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Categories
                   </p>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {categories.map((cat) => (
                       <div
                         key={cat.id}

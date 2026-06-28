@@ -1,15 +1,37 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useQuery } from '@tanstack/react-query'
 import { ProductCard } from '@/modules/shop/components/product-card'
-import { useProductsQuery } from '@/hooks/query/use-products-query'
+import { listProducts } from '@/services/product.service'
 import { useWishlistStore } from '@/store/wishlist-store'
+import type { Product } from '@/types/product'
 
 export const WishlistPageModule = () => {
   const ids = useWishlistStore((s) => s.productIds)
-  const { data } = useProductsQuery({ limit: 50 })
-  const items = useMemo(() => (data?.items ?? []).filter((item) => ids.includes(item.id)), [data?.items, ids])
+  const reconcile = useWishlistStore((s) => s.reconcile)
+  const idsKey = ids.join(',')
+
+  const { data, isSuccess } = useQuery({
+    queryKey: ['wishlist-products', idsKey],
+    queryFn: () => listProducts({ ids: idsKey, limit: ids.length }),
+    enabled: ids.length > 0,
+  })
+
+  // Resolve products in the user's saved order
+  const items = useMemo(() => {
+    const map = new Map((data?.items ?? []).map((p) => [p.id, p]))
+    return ids.map((id) => map.get(id)).filter(Boolean) as Product[]
+  }, [data?.items, ids])
+
+  // Drop ids whose product was deleted/unavailable so the badge count matches what's shown
+  useEffect(() => {
+    if (isSuccess && data) {
+      reconcile((data.items ?? []).map((p) => p.id))
+    }
+  }, [isSuccess, data, reconcile])
+
   const [sharing, setSharing] = useState(false)
 
   const handleShare = async () => {
@@ -60,14 +82,14 @@ export const WishlistPageModule = () => {
           </div>
           <h3 className="mb-1.5 text-lg font-semibold text-slate-700 dark:text-slate-300">Your wishlist is empty</h3>
           <p className="mb-6 max-w-xs text-sm text-slate-500">Save the pieces you love by tapping the heart icon on any product.</p>
-          <a href="/shop" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+          <a href="/products" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
             Discover Products
           </a>
         </div>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((item) => (
-          <ProductCard key={item.id} product={item} />
+          <ProductCard key={item.id} product={item} wishlistMode />
         ))}
       </div>
     </main>

@@ -2,12 +2,13 @@
 export const dynamic = 'force-dynamic'
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, X } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, X } from 'lucide-react';
 import { listProducts } from '@/services/product.service';
 import { useCartStore } from '@/store/cart-store';
+import { setCompareIds } from '@/hooks/use-compare';
 import type { Product } from '@/types/product';
 
 const AUDIENCE_LABEL: Record<string, string> = {
@@ -22,14 +23,21 @@ export default function ComparePage() {
 
 function ComparePageInner() {
   const params = useSearchParams();
+  const router = useRouter();
   const ids = useMemo(() => (params.get('ids') ?? '').split(',').filter(Boolean).slice(0, 3), [params]);
+  const idsKey = ids.join(',');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const addLine = useCartStore((s) => s.addLine);
 
+  // Keep the shared compare selection in sync with the URL (e.g. shared links)
+  useEffect(() => {
+    setCompareIds(ids);
+  }, [idsKey]);
+
   useEffect(() => {
     if (!ids.length) { setLoading(false); return; }
-    listProducts({ ids: ids.join(','), limit: ids.length })
+    listProducts({ ids: idsKey, limit: ids.length })
       .then((res) => {
         // Preserve the user's comparison order
         const map = new Map((res.items ?? []).map((p) => [p.id, p]))
@@ -37,12 +45,17 @@ function ComparePageInner() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [ids]);
+  }, [idsKey]);
 
   const removeProduct = (id: string) => {
     const remaining = ids.filter((i) => i !== id);
-    const url = remaining.length ? `/compare?ids=${remaining.join(',')}` : '/products';
-    window.location.href = url;
+    // Update the shared selection so product listings reflect the change immediately
+    setCompareIds(remaining);
+    if (remaining.length) {
+      router.replace(`/compare?ids=${remaining.join(',')}`);
+    } else {
+      router.replace('/products');
+    }
   };
 
   if (loading) {
@@ -71,9 +84,24 @@ function ComparePageInner() {
   return (
     <section className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Compare Products</h1>
-          <p className="mt-1 text-sm text-slate-500">Side-by-side comparison of {cols} product{cols > 1 ? 's' : ''}</p>
+        <button
+          onClick={() => router.push('/products')}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to products
+        </button>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Compare Products</h1>
+            <p className="mt-1 text-sm text-slate-500">Side-by-side comparison of {cols} product{cols > 1 ? 's' : ''}</p>
+          </div>
+          <button
+            onClick={() => { setCompareIds([]); router.push('/products'); }}
+            className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+          >
+            Clear all
+          </button>
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">

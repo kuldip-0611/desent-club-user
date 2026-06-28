@@ -8,6 +8,9 @@ import { apiClient } from '@/services/api/client'
 type WishlistState = {
   productIds: string[]
   toggle: (productId: string) => void
+  add: (productId: string) => void
+  remove: (productId: string) => void
+  reconcile: (validIds: string[]) => void
   has: (productId: string) => boolean
   syncFromServer: () => Promise<void>
   syncToServer: () => Promise<void>
@@ -44,6 +47,26 @@ export const useWishlistStore = create<WishlistState>()(
         // Fire-and-forget server sync
         if (has) serverRemove(productId)
         else serverAdd(productId)
+      },
+
+      add: (productId) => {
+        if (get().productIds.includes(productId)) return
+        set((state) => ({ productIds: [...state.productIds, productId] }))
+        serverAdd(productId)
+      },
+
+      remove: (productId) => {
+        if (!get().productIds.includes(productId)) return
+        set((state) => ({ productIds: state.productIds.filter((id) => id !== productId) }))
+        serverRemove(productId)
+      },
+
+      /** Drop ids that no longer resolve to a live product (keeps badge count accurate) */
+      reconcile: (validIds) => {
+        const valid = new Set(validIds)
+        const current = get().productIds
+        const next = current.filter((id) => valid.has(id))
+        if (next.length !== current.length) set({ productIds: next })
       },
 
       has: (productId) => get().productIds.includes(productId),

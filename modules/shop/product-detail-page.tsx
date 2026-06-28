@@ -388,16 +388,23 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
         {/* ── Image gallery ── */}
         <div className="space-y-3">
           <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-            <Image
-              src={displayImages[activeImage] ?? displayImages[0]}
-              alt={product.name}
-              fill
-              className="object-cover transition duration-300"
-            />
+            <button
+              type="button"
+              onClick={() => openLightbox(activeImage)}
+              className="absolute inset-0 z-0 cursor-zoom-in"
+              aria-label="Zoom image"
+            >
+              <Image
+                src={displayImages[activeImage] ?? displayImages[0]}
+                alt={product.name}
+                fill
+                className="object-cover transition duration-300"
+              />
+            </button>
             {/* Zoom icon */}
             <button
               onClick={() => openLightbox(activeImage)}
-              className="absolute right-3 top-3 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white dark:bg-slate-800/90 dark:hover:bg-slate-700"
+              className="absolute right-3 top-3 z-10 rounded-full bg-white/80 p-2 shadow backdrop-blur-sm hover:bg-white dark:bg-slate-800/90 dark:hover:bg-slate-700"
               aria-label="Zoom image"
             >
               <ZoomIn className="h-4 w-4 text-slate-700 dark:!text-white" />
@@ -407,14 +414,14 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
               <>
                 <button
                   onClick={() => setActiveImage((i) => (i - 1 + displayImages.length) % displayImages.length)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
+                  className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="h-4 w-4 text-slate-900 dark:text-white" />
                 </button>
                 <button
                   onClick={() => setActiveImage((i) => (i + 1) % displayImages.length)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
+                  className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg backdrop-blur-sm hover:bg-white dark:bg-slate-700/90 dark:hover:bg-slate-600"
                   aria-label="Next image"
                 >
                   <ChevronRight className="h-4 w-4 text-slate-900 dark:text-white" />

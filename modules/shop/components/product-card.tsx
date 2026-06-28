@@ -3,28 +3,23 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, ShoppingBag, GitCompareArrows, X } from 'lucide-react'
+import { Heart, ShoppingBag, GitCompareArrows, X, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/store/cart-store'
 import { useWishlistStore } from '@/store/wishlist-store'
 import { useFlashSaleStore } from '@/store/flash-sale-store'
+import { useAuthStore } from '@/store/auth-store'
+import { useUiStore } from '@/store/ui-store'
+import { getCompareIds, setCompareIds, useCompareIds, MAX_COMPARE } from '@/hooks/use-compare'
 import type { Product, ProductVariant } from '@/types/product'
-
-function getCompareIds(): string[] {
-  if (typeof window === 'undefined') return []
-  return (sessionStorage.getItem('compare_ids') ?? '').split(',').filter(Boolean)
-}
-
-function setCompareIds(ids: string[]) {
-  sessionStorage.setItem('compare_ids', ids.join(','))
-  window.dispatchEvent(new Event('compare-updated'))
-}
 
 type ProductCardProps = {
   product: Product
+  /** Renders the card in wishlist context: shows an explicit remove button and clears the item after adding to cart. */
+  wishlistMode?: boolean
 }
 
 // Quick-pick modal — choose size & color before adding to cart
@@ -174,12 +169,15 @@ function QuickPickModal({
   )
 }
 
-export const ProductCard = ({ product }: ProductCardProps) => {
+export const ProductCard = ({ product, wishlistMode = false }: ProductCardProps) => {
   const router = useRouter()
   const addLine = useCartStore((s) => s.addLine)
   const lines = useCartStore((s) => s.lines)
   const toggleWishlist = useWishlistStore((s) => s.toggle)
+  const removeWishlist = useWishlistStore((s) => s.remove)
   const has = useWishlistStore((s) => s.has(product.id))
+  const user = useAuthStore((s) => s.user)
+  const openAuthModal = useUiStore((s) => s.openAuthModal)
   const saleInfo = useFlashSaleStore((s) => s.saleMap[product.id] ?? null)
   const salePrice = saleInfo ? Math.round(product.price * (100 - saleInfo.discountPercent)) / 100 : null
   const [showQuickPick, setShowQuickPick] = useState(false)
@@ -192,13 +190,22 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const isOutOfStock = totalStock === 0
   const isLowStock = !isOutOfStock && totalStock <= 5
 
-  const [inCompare, setInCompare] = useState(false)
-  useEffect(() => {
-    const sync = () => setInCompare(getCompareIds().includes(product.id))
-    sync()
-    window.addEventListener('compare-updated', sync)
-    return () => window.removeEventListener('compare-updated', sync)
-  }, [product.id])
+  const compareIds = useCompareIds()
+  const inCompare = compareIds.includes(product.id)
+
+  const handleWishlistToggle = () => {
+    if (!user) {
+      toast('Please sign in to save items to your wishlist')
+      openAuthModal()
+      return
+    }
+    toggleWishlist(product.id)
+  }
+
+  const handleRemoveFromWishlist = () => {
+    removeWishlist(product.id)
+    toast.success('Removed from wishlist')
+  }
 
   const toggleCompare = () => {
     const ids = getCompareIds()
@@ -206,8 +213,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       setCompareIds(ids.filter((i) => i !== product.id))
       toast.success('Removed from compare')
     } else {
-      if (ids.length >= 3) {
-        toast.error('You can compare up to 3 products')
+      if (ids.length >= MAX_COMPARE) {
+        toast.error(`You can compare up to ${MAX_COMPARE} products`)
         return
       }
       const next = [...ids, product.id]
@@ -245,6 +252,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     })
     toast.success(`${product.name} added to cart`)
     setShowQuickPick(false)
+    // On the wishlist screen, moving an item to the cart should clear it from the wishlist
+    if (wishlistMode) removeWishlist(product.id)
   }
 
   return (
@@ -252,8 +261,19 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       <motion.article
         whileHover={{ y: -4 }}
         transition={{ duration: 0.2 }}
-        className="group overflow-hidden rounded-2xl border border-slate-200 bg-white"
+        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white"
       >
+        {wishlistMode && (
+          <button
+            type="button"
+            onClick={handleRemoveFromWishlist}
+            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm backdrop-blur-sm transition hover:bg-rose-50 hover:text-rose-600"
+            aria-label="Remove from wishlist"
+            title="Remove from wishlist"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
         <Link
           href={saleInfo ? `/products/${product.slug}?from=sale&saleId=${saleInfo.saleId}` : `/products/${product.slug}`}
           className="relative block aspect-[4/5] overflow-hidden"
@@ -306,13 +326,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </div>
           <div className="flex items-start justify-between gap-1">
             <h3 className="line-clamp-2 text-xs font-semibold text-slate-900 sm:line-clamp-1 sm:text-sm">{product.name}</h3>
-            <button
-              onClick={() => toggleWishlist(product.id)}
-              className="shrink-0 rounded-full p-1 text-slate-500 hover:bg-slate-100 sm:p-1.5"
-              aria-label="Toggle wishlist"
-            >
-              <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${has ? 'fill-rose-500 text-rose-500' : ''}`} />
-            </button>
+            {!wishlistMode && (
+              <button
+                onClick={handleWishlistToggle}
+                className="shrink-0 rounded-full p-1 text-slate-500 hover:bg-slate-100 sm:p-1.5"
+                aria-label="Toggle wishlist"
+              >
+                <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${has ? 'fill-rose-500 text-rose-500' : ''}`} />
+              </button>
+            )}
           </div>
           <p className="hidden text-xs text-slate-500 sm:line-clamp-2">{product.description}</p>
           <div className="flex flex-wrap items-center gap-1.5">
