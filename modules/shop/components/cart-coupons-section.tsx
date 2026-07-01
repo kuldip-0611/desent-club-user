@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   getCartCategoryIds,
@@ -70,7 +69,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
         toast.error(result.message ?? 'Coupon is not valid for this cart')
         return
       }
-      const discount = Math.round(Number(result.discountAmount))
+      const discount = Math.round(Number(result.discountAmount) * 100) / 100
       applyCoupon(result.code ?? normalized, discount)
       setManualCode(result.code ?? normalized)
       toast.success('Coupon applied')
@@ -87,7 +86,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
     void validateCoupon(couponCode, subtotal, categoryIds).then((result) => {
       if (cancelled) return
       if (result.valid) {
-        const discount = Math.round(Number(result.discountAmount))
+        const discount = Math.round(Number(result.discountAmount) * 100) / 100
         const state = useCartStore.getState()
         if (state.couponDiscount !== discount) {
           applyCoupon(result.code ?? couponCode, discount)
@@ -107,7 +106,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       <div className="flex items-center justify-between gap-2">
-        <p className={`font-semibold text-slate-900 ${compact ? 'text-xs' : 'text-sm'}`}>
+        <p className={`font-semibold text-slate-900 dark:text-slate-100 ${compact ? 'text-xs' : 'text-sm'}`}>
           Coupons
         </p>
         {couponCode ? (
@@ -117,7 +116,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
               clearCoupon()
               setManualCode('')
             }}
-            className="text-[11px] font-medium text-rose-600 hover:underline"
+            className="text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:underline"
           >
             Remove
           </button>
@@ -125,9 +124,14 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
       </div>
 
       {couponCode ? (
-        <p className={`rounded-lg bg-emerald-50 px-2.5 py-1.5 text-emerald-800 ${compact ? 'text-[11px]' : 'text-xs'}`}>
-          Applied: <span className="font-semibold">{couponCode}</span>
-        </p>
+        <div className={`flex items-center gap-2 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1.5 ${compact ? 'text-[11px]' : 'text-xs'}`}>
+          <svg className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="text-emerald-800 dark:text-emerald-300">
+            Applied: <span className="font-semibold">{couponCode}</span>
+          </span>
+        </div>
       ) : null}
 
       <div className="flex gap-2">
@@ -137,19 +141,18 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
           placeholder="Enter code"
           className={compact ? 'h-9 text-xs' : ''}
         />
-        <Button
+        <button
           type="button"
-          variant="outline"
           disabled={applying || !manualCode.trim()}
-          className={compact ? 'h-9 shrink-0 px-3 text-xs' : 'shrink-0'}
           onClick={() => void applyCode(manualCode)}
+          className={`shrink-0 rounded-lg border border-slate-900 bg-slate-900 font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300 ${compact ? 'h-9 px-3 text-xs' : 'px-4 py-2 text-xs'}`}
         >
-          Apply
-        </Button>
+          {applying ? '…' : 'Apply'}
+        </button>
       </div>
 
       {loading ? (
-        <p className={`text-slate-500 ${compact ? 'text-[11px]' : 'text-xs'}`}>Loading offers…</p>
+        <p className={`text-slate-500 dark:text-slate-400 ${compact ? 'text-[11px]' : 'text-xs'}`}>Loading offers…</p>
       ) : null}
 
       {!loading && applicable.length > 0 ? (
@@ -164,21 +167,21 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
                 onClick={() => void applyCode(coupon.code)}
                 className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition ${
                   isActive
-                    ? 'border-emerald-300 bg-emerald-50'
-                    : 'border-slate-200 bg-slate-50 hover:border-slate-900 hover:bg-slate-100'
+                    ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-950/50'
+                    : 'border-slate-200 bg-slate-50 hover:border-slate-900 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-500 dark:hover:bg-slate-700'
                 } ${compact ? 'text-[11px]' : 'text-xs'}`}
               >
                 <span>
-                  <span className="font-semibold text-slate-900">{coupon.code}</span>
-                  <span className="ml-1.5 text-slate-600">{formatDiscountLabel(coupon)}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{coupon.code}</span>
+                  <span className="ml-1.5 text-slate-600 dark:text-slate-400">{formatDiscountLabel(coupon)}</span>
                   {coupon.minSubtotal ? (
-                    <span className="mt-0.5 block text-slate-500">
+                    <span className="mt-0.5 block text-slate-500 dark:text-slate-500">
                       Min order Rs. {coupon.minSubtotal}
                     </span>
                   ) : null}
                 </span>
-                <span className="font-semibold text-slate-900">
-                  -Rs. {Math.round(Number(coupon.discountAmount))}
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  -Rs. {Number(coupon.discountAmount).toFixed(2)}
                 </span>
               </button>
             )
@@ -187,7 +190,7 @@ export const CartCouponsSection = ({ compact = false }: CartCouponsSectionProps)
       ) : null}
 
       {!loading && applicable.length === 0 && !couponCode ? (
-        <p className={`text-slate-500 ${compact ? 'text-[11px]' : 'text-xs'}`}>
+        <p className={`text-slate-500 dark:text-slate-400 ${compact ? 'text-[11px]' : 'text-xs'}`}>
           No coupons available for this cart yet.
         </p>
       ) : null}

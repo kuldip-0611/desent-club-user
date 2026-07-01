@@ -42,6 +42,7 @@ export const AddressesPanel = ({
   const [form, setForm] = useState<AddressFormValues>(emptyAddressForm())
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof AddressFormValues, string>>>({})
 
   const loadAddresses = useCallback(async () => {
     if (!isAuthenticated) return
@@ -80,11 +81,43 @@ export const AddressesPanel = ({
     setForm(emptyAddressForm())
     setEditingId(null)
     setShowForm(false)
+    setFormErrors({})
+  }
+
+  const validatePhone = (val: string) => {
+    const digits = val.replace(/\D/g, '')
+    if (!digits) return 'Phone number is required'
+    if (digits.length !== 10) return 'Enter a valid 10-digit mobile number'
+    if (!/^[6-9]/.test(digits)) return 'Mobile number must start with 6, 7, 8 or 9'
+    return ''
+  }
+
+  const validatePincode = (val: string) => {
+    const digits = val.replace(/\D/g, '')
+    if (!digits) return 'Pincode is required'
+    if (digits.length !== 6) return 'Pincode must be 6 digits'
+    if (/^0/.test(digits)) return 'Enter a valid Indian pincode'
+    return ''
+  }
+
+  const validateForm = () => {
+    const errors: Partial<Record<keyof AddressFormValues, string>> = {}
+    if (!form.fullName.trim()) errors.fullName = 'Full name is required'
+    const phoneErr = validatePhone(form.phone)
+    if (phoneErr) errors.phone = phoneErr
+    if (!form.line1.trim()) errors.line1 = 'Address line 1 is required'
+    if (!form.city.trim()) errors.city = 'City is required'
+    if (!form.state.trim()) errors.state = 'State is required'
+    const pincodeErr = validatePincode(form.pincode)
+    if (pincodeErr) errors.pincode = pincodeErr
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const startEdit = (address: UserAddress) => {
     setEditingId(address.id)
     setForm(addressToForm(address))
+    setFormErrors({})
     setShowForm(true)
   }
 
@@ -94,18 +127,17 @@ export const AddressesPanel = ({
       ...emptyAddressForm(),
       isDefault: addresses.length === 0,
     })
+    setFormErrors({})
     setShowForm(true)
   }
 
   const updateField = (key: keyof AddressFormValues, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+    if (formErrors[key]) setFormErrors((prev) => ({ ...prev, [key]: '' }))
   }
 
   const handleSave = async () => {
-    if (!form.fullName.trim() || !form.phone.trim() || !form.line1.trim()) {
-      toast.error('Name, phone, and address line are required')
-      return
-    }
+    if (!validateForm()) return
     setSaving(true)
     try {
       if (editingId) {
@@ -319,48 +351,110 @@ export const AddressesPanel = ({
           <p className="text-sm font-semibold text-slate-900">
             {editingId ? 'Edit address' : 'New address'}
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input
-              placeholder="Label (Home, Office)"
-              value={form.label}
-              onChange={(e) => updateField('label', e.target.value)}
-            />
-            <Input
-              placeholder="Full name"
-              value={form.fullName}
-              onChange={(e) => updateField('fullName', e.target.value)}
-            />
-            <Input
-              placeholder="Phone"
-              value={form.phone}
-              onChange={(e) => updateField('phone', e.target.value)}
-            />
-            <Input
-              placeholder="Pincode"
-              value={form.pincode}
-              onChange={(e) => updateField('pincode', e.target.value)}
-            />
-            <Input
-              placeholder="City"
-              value={form.city}
-              onChange={(e) => updateField('city', e.target.value)}
-            />
-            <Input
-              placeholder="State"
-              value={form.state}
-              onChange={(e) => updateField('state', e.target.value)}
-            />
-            <Input
-              placeholder="Country"
-              value={form.country}
-              onChange={(e) => updateField('country', e.target.value)}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Input
+                placeholder="Label (Home, Office)"
+                value={form.label}
+                onChange={(e) => updateField('label', e.target.value)}
+              />
+            </div>
+            <div>
+              <Input
+                placeholder="Full name *"
+                value={form.fullName}
+                onChange={(e) => updateField('fullName', e.target.value)}
+                className={formErrors.fullName ? 'border-rose-500 focus-visible:ring-rose-400' : ''}
+              />
+              {formErrors.fullName && (
+                <p className="mt-1 text-[11px] text-rose-600">{formErrors.fullName}</p>
+              )}
+            </div>
+            <div>
+              <Input
+                placeholder="Mobile number *"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.phone}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+                  updateField('phone', digits)
+                }}
+                onBlur={() => {
+                  const err = validatePhone(form.phone)
+                  if (err) setFormErrors((prev) => ({ ...prev, phone: err }))
+                }}
+                className={formErrors.phone ? 'border-rose-500 focus-visible:ring-rose-400' : ''}
+              />
+              {formErrors.phone ? (
+                <p className="mt-1 text-[11px] text-rose-600">{formErrors.phone}</p>
+              ) : (
+                <p className="mt-1 text-[10px] text-slate-400">10-digit Indian mobile number</p>
+              )}
+            </div>
+            <div>
+              <Input
+                placeholder="Pincode *"
+                inputMode="numeric"
+                maxLength={6}
+                value={form.pincode}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  updateField('pincode', digits)
+                }}
+                onBlur={() => {
+                  const err = validatePincode(form.pincode)
+                  if (err) setFormErrors((prev) => ({ ...prev, pincode: err }))
+                }}
+                className={formErrors.pincode ? 'border-rose-500 focus-visible:ring-rose-400' : ''}
+              />
+              {formErrors.pincode ? (
+                <p className="mt-1 text-[11px] text-rose-600">{formErrors.pincode}</p>
+              ) : (
+                <p className="mt-1 text-[10px] text-slate-400">6-digit Indian pincode</p>
+              )}
+            </div>
+            <div>
+              <Input
+                placeholder="City *"
+                value={form.city}
+                onChange={(e) => updateField('city', e.target.value)}
+                className={formErrors.city ? 'border-rose-500 focus-visible:ring-rose-400' : ''}
+              />
+              {formErrors.city && (
+                <p className="mt-1 text-[11px] text-rose-600">{formErrors.city}</p>
+              )}
+            </div>
+            <div>
+              <Input
+                placeholder="State *"
+                value={form.state}
+                onChange={(e) => updateField('state', e.target.value)}
+                className={formErrors.state ? 'border-rose-500 focus-visible:ring-rose-400' : ''}
+              />
+              {formErrors.state && (
+                <p className="mt-1 text-[11px] text-rose-600">{formErrors.state}</p>
+              )}
+            </div>
+            <div>
+              <Input
+                placeholder="Country"
+                value={form.country}
+                onChange={(e) => updateField('country', e.target.value)}
+              />
+            </div>
           </div>
-          <Input
-            placeholder="Address line 1"
-            value={form.line1}
-            onChange={(e) => updateField('line1', e.target.value)}
-          />
+          <div>
+            <Input
+              placeholder="Address line 1 *"
+              value={form.line1}
+              onChange={(e) => updateField('line1', e.target.value)}
+              className={formErrors.line1 ? 'border-rose-500 focus-visible:ring-rose-400' : ''}
+            />
+            {formErrors.line1 && (
+              <p className="mt-1 text-[11px] text-rose-600">{formErrors.line1}</p>
+            )}
+          </div>
           <Input
             placeholder="Address line 2 (optional)"
             value={form.line2}

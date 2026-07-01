@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
-import { CreditCard, Banknote, CheckCircle, Zap, Star } from 'lucide-react'
+import { CreditCard, Banknote, CheckCircle, Zap, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AddressesPanel } from '@/modules/shop/components/addresses-panel'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { openRazorpayCheckout } from '@/lib/razorpay'
-import { createOrder, verifyPayment } from '@/services/order.service'
+import { createOrder, verifyPayment, previewOrder, type OrderPreviewResponse } from '@/services/order.service'
 import { getStoreCreditBalance } from '@/services/store-credit.service'
 import { getLoyaltyAccount, getLoyaltyRules, type LoyaltyAccount, type LoyaltyRules } from '@/services/loyalty.service'
 import { getStoredAffiliateCode } from '@/hooks/use-utm'
@@ -26,8 +26,12 @@ export const CheckoutPageModule = () => {
   const clearCart = useCartStore((s) => s.clear)
   const couponDiscount = useCartStore((s) => s.couponDiscount)
   const couponCode = useCartStore((s) => s.couponCode)
+  const giftCardApplied = useCartStore((s) => s.giftCardApplied)
+  const loyaltyApplied = useCartStore((s) => s.loyaltyApplied)
   const selectedAddressId = useCheckoutAddressStore((s) => s.selectedAddressId)
   const summary = useMemo(() => getCartSummary(lines, couponDiscount), [lines, couponDiscount])
+  const [preview, setPreview] = useState<OrderPreviewResponse | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [placing, setPlacing] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ONLINE')
   const [codOtpModal, setCodOtpModal] = useState<{ orderId: string; otp: string } | null>(null)
@@ -38,40 +42,28 @@ export const CheckoutPageModule = () => {
   const [storeCreditBalance, setStoreCreditBalance] = useState(0)
   const [applyStoreCredit, setApplyStoreCredit] = useState(false)
 
-  // Gift card
-  const [giftCardInput, setGiftCardInput] = useState('')
-  const [giftCardApplied, setGiftCardApplied] = useState<{ code: string; balance: number } | null>(null)
-  const [giftCardChecking, setGiftCardChecking] = useState(false)
-
-  // Loyalty points
+  // Loyalty points — silently fetched to compute points for order API (UI is on cart page)
   const [loyaltyAccount, setLoyaltyAccount] = useState<LoyaltyAccount | null>(null)
   const [loyaltyRules, setLoyaltyRules] = useState<LoyaltyRules | null>(null)
-  const [applyLoyalty, setApplyLoyalty] = useState(false)
-  const [loyaltyLoading, setLoyaltyLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { setLoyaltyLoading(false); return }
+    if (!user) return
     getStoreCreditBalance().then((res) => setStoreCreditBalance(res.balance)).catch(() => undefined)
     Promise.allSettled([getLoyaltyAccount(), getLoyaltyRules()]).then(([acct, rules]) => {
       if (acct.status === 'fulfilled') setLoyaltyAccount(acct.value)
       if (rules.status === 'fulfilled') setLoyaltyRules(rules.value)
-      setLoyaltyLoading(false)
     })
   }, [user])
 
-  // Loyalty discount calculation
-  const loyaltyBalance = loyaltyAccount?.balance ?? 0
-  const minPoints = loyaltyRules?.minRedeemPoints ?? 100
   const rupeePerPoint = loyaltyRules?.rupeePerPoint ?? 0.25
   const maxRedeemPercent = loyaltyRules?.maxRedeemPercent ?? 20
-  const canUseLoyalty = loyaltyBalance >= minPoints
-
+  const loyaltyBalance = loyaltyAccount?.balance ?? 0
   const maxLoyaltyDiscount = (summary.total * maxRedeemPercent) / 100
   const potentialLoyaltyDiscount = loyaltyBalance * rupeePerPoint
-  const loyaltyDiscountAmount = applyLoyalty
+  const loyaltyDiscountAmount = loyaltyApplied
     ? Math.min(potentialLoyaltyDiscount, maxLoyaltyDiscount, summary.total)
     : 0
-  const loyaltyPointsToUse = applyLoyalty
+  const loyaltyPointsToUse = loyaltyApplied
     ? Math.ceil(loyaltyDiscountAmount / rupeePerPoint)
     : 0
 
@@ -80,23 +72,29 @@ export const CheckoutPageModule = () => {
   const storeCreditToApply = applyStoreCredit ? Math.min(storeCreditBalance, afterLoyalty) : 0
   const afterStoreCredit = Math.max(afterLoyalty - storeCreditToApply, 0)
   const giftCardToApply = giftCardApplied ? Math.min(giftCardApplied.balance, afterStoreCredit) : 0
-  const finalTotal = Math.max(afterStoreCredit - giftCardToApply, 0)
+  // Use backend-verified total when available; fall back to frontend estimate while loading
+  const finalTotal = preview ? preview.total : Math.max(afterStoreCredit - giftCardToApply, 0)
 
-  const handleCheckGiftCard = async () => {
-    if (!giftCardInput.trim()) return
-    setGiftCardChecking(true)
-    try {
-      const { apiClient } = await import('@/services/api/client')
-      const { data } = await apiClient.post<{ code: string; balance: number; isValid: boolean }>('/gift-cards/check', { code: giftCardInput.trim() })
-      setGiftCardApplied({ code: data.code, balance: data.balance })
-      toast.success(`Gift card applied! ₹${data.balance.toFixed(2)} available`)
-    } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(msg ?? 'Invalid gift card')
-    } finally {
-      setGiftCardChecking(false)
-    }
-  }
+  // Fetch backend-authoritative price preview whenever cart or discounts change
+  useEffect(() => {
+    if (!user || lines.length === 0) { setPreview(null); return }
+    setPreviewLoading(true)
+    const timer = setTimeout(() => {
+      previewOrder({
+        items: lines.map((l) => ({ productId: l.productId, variantId: l.variantId, size: l.size, color: l.color, quantity: l.quantity })),
+        couponCode: couponCode ?? undefined,
+        loyaltyPoints: loyaltyPointsToUse > 0 ? loyaltyPointsToUse : undefined,
+        storeCreditAmount: storeCreditToApply > 0 ? storeCreditToApply : undefined,
+        giftCardCode: giftCardApplied?.code,
+      })
+        .then(setPreview)
+        .catch(() => setPreview(null))
+        .finally(() => setPreviewLoading(false))
+    }, 400)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, lines, couponCode, loyaltyPointsToUse, storeCreditToApply, giftCardApplied?.code])
+
 
   const handlePlaceOrder = () => {
     requireAuth(() => { void placeOrder() })
@@ -181,6 +179,29 @@ export const CheckoutPageModule = () => {
     }
   }
 
+  // Guest wall — show a sign-in prompt instead of a broken checkout
+  if (!user) {
+    return (
+      <main className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-6 px-4 py-16 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+          <CreditCard className="h-9 w-9 text-slate-400 dark:text-slate-500" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Sign in to checkout</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Your cart is saved. Sign in to complete your order — your items will still be there.
+          </p>
+        </div>
+        <Button
+          className="w-full max-w-xs bg-slate-900 hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          onClick={() => requireAuth(() => {})}
+        >
+          Sign in to continue
+        </Button>
+      </main>
+    )
+  }
+
   return (
     <>
     {/* COD OTP Modal */}
@@ -241,6 +262,17 @@ export const CheckoutPageModule = () => {
           onRequireAuth={() => requireAuth(() => {})}
         />
 
+        {/* Address warning */}
+        {!selectedAddressId && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-700/40 dark:bg-amber-950/30">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">No delivery address selected</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">Please add or select a delivery address above to place your order.</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Payment method selector ── */}
         <div>
           <p className="mb-3 text-sm font-semibold text-slate-700">Payment method</p>
@@ -291,152 +323,46 @@ export const CheckoutPageModule = () => {
           )}
           {paymentMethod === 'COD' && (
             <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
-              No advance payment needed. Pay the delivery agent when your order arrives. ₹{finalTotal} will be collected.
+              No advance payment needed. Pay the delivery agent when your order arrives. ₹{finalTotal.toFixed(2)} will be collected.
             </div>
           )}
         </div>
       </section>
 
       <aside className="h-fit space-y-3">
-        {/* ── Savings & Loyalty panel — always visible when logged in ── */}
-        {user && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Rewards & Savings</p>
-              {loyaltyLoading && (
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-yellow-400 border-t-transparent" />
-              )}
-            </div>
-
-            {/* Loyalty points */}
+        {/* Store credit — only this stays on checkout since it's checkout-specific */}
+        {user && storeCreditBalance > 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
             <div className={`rounded-xl border p-3 transition ${
-              applyLoyalty
-                ? 'border-yellow-400 bg-yellow-50 dark:border-yellow-500 dark:bg-yellow-950/40'
+              applyStoreCredit
+                ? 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-950/40'
                 : 'border-slate-200 dark:border-slate-700'
             }`}>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50">
-                    <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
+                    <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
                   </div>
-                  <div className="min-w-0">
-                    {loyaltyLoading ? (
-                      <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                    ) : (
-                      <>
-                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {loyaltyBalance.toLocaleString()} pts
-                          <span className="ml-1.5 text-xs font-normal text-slate-500 dark:text-slate-400">
-                            = ₹{(loyaltyBalance * rupeePerPoint).toFixed(0)} off
-                          </span>
-                        </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                          {canUseLoyalty
-                            ? `Up to ₹${Math.min(loyaltyBalance * rupeePerPoint, (summary.total * maxRedeemPercent) / 100).toFixed(0)} off this order`
-                            : `Need ${minPoints} pts to redeem · earn more by shopping`}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {!loyaltyLoading && (
-                  canUseLoyalty ? (
-                    <button
-                      type="button"
-                      onClick={() => setApplyLoyalty((v) => !v)}
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
-                        applyLoyalty
-                          ? 'bg-yellow-500 text-white dark:bg-yellow-400 dark:text-yellow-950'
-                          : 'border border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-500 dark:text-yellow-400 dark:hover:bg-yellow-900/30'
-                      }`}
-                    >
-                      {applyLoyalty ? '✓ Applied' : 'Apply'}
-                    </button>
-                  ) : (
-                    <span className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                      {loyaltyBalance} / {minPoints} pts
-                    </span>
-                  )
-                )}
-              </div>
-              {applyLoyalty && (
-                <div className="mt-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 px-3 py-1.5 text-xs text-yellow-800 dark:text-yellow-300 font-medium">
-                  🏆 Saving ₹{loyaltyDiscountAmount.toFixed(2)} · using {loyaltyPointsToUse} pts (max {maxRedeemPercent}% of order)
-                </div>
-              )}
-            </div>
-
-            {/* Store credit */}
-            {storeCreditBalance > 0 && (
-              <div className={`rounded-xl border p-3 transition ${
-                applyStoreCredit
-                  ? 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-950/40'
-                  : 'border-slate-200 dark:border-slate-700'
-              }`}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
-                      <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">₹{storeCreditBalance.toFixed(2)} Store Credit</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">From a previous return</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setApplyStoreCredit((v) => !v)}
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
-                      applyStoreCredit
-                        ? 'bg-green-600 text-white dark:bg-green-500'
-                        : 'border border-green-400 text-green-700 hover:bg-green-100 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/30'
-                    }`}
-                  >
-                    {applyStoreCredit ? '✓ Applied' : 'Apply'}
-                  </button>
-                </div>
-                {applyStoreCredit && (
-                  <div className="mt-2 rounded-lg bg-green-100 dark:bg-green-900/40 px-3 py-1.5 text-xs text-green-800 dark:text-green-300 font-medium">
-                    ⚡ Saving ₹{storeCreditToApply.toFixed(2)} with store credit
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Gift card */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Gift Card</p>
-              {giftCardApplied ? (
-                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono">{giftCardApplied.code}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">₹{giftCardToApply.toFixed(2)} will be applied</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">₹{storeCreditBalance.toFixed(2)} Store Credit</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">From a previous return</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => { setGiftCardApplied(null); setGiftCardInput('') }}
-                    className="text-xs text-red-600 dark:text-red-400 hover:underline"
-                  >
-                    Remove
-                  </button>
                 </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-transparent dark:text-slate-100 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-slate-900 dark:focus:border-slate-400 dark:placeholder-slate-500"
-                    placeholder="XXXX-XXXX-XXXX"
-                    value={giftCardInput}
-                    onChange={(e) => setGiftCardInput(e.target.value.toUpperCase())}
-                  />
-                  <button
-                    type="button"
-                    disabled={giftCardChecking || !giftCardInput.trim()}
-                    onClick={() => void handleCheckGiftCard()}
-                    className="rounded-lg border border-slate-900 bg-slate-900 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700 dark:hover:bg-slate-300 disabled:opacity-50 transition"
-                  >
-                    {giftCardChecking ? '…' : 'Apply'}
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setApplyStoreCredit((v) => !v)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition ${
+                    applyStoreCredit
+                      ? 'bg-green-600 text-white dark:bg-green-500'
+                      : 'border border-green-400 text-green-700 hover:bg-green-100 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-900/30'
+                  }`}
+                >
+                  {applyStoreCredit ? '✓ Applied' : 'Apply'}
+                </button>
+              </div>
+              {applyStoreCredit && (
+                <div className="mt-2 rounded-lg bg-green-100 dark:bg-green-900/40 px-3 py-1.5 text-xs text-green-800 dark:text-green-300 font-medium">
+                  ⚡ Saving ₹{storeCreditToApply.toFixed(2)} with store credit
                 </div>
               )}
             </div>
@@ -445,33 +371,47 @@ export const CheckoutPageModule = () => {
 
         {/* ── Order summary ── */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-          <p className="text-lg font-semibold">Order summary</p>
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-semibold">Order summary</p>
+            {previewLoading && (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+            )}
+          </div>
           <div className="mt-2 space-y-1 text-sm text-slate-600">
-            <div className="flex justify-between"><span>Subtotal</span><span>₹{summary.subtotal}</span></div>
-            {summary.discount > 0 && (
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{(preview?.subtotal ?? summary.subtotal).toFixed(2)}</span>
+            </div>
+            {(preview ? preview.couponDiscount > 0 : summary.discount > 0) && (
               <div className="flex justify-between text-emerald-700">
                 <span>Coupon{couponCode ? ` (${couponCode})` : ''}</span>
-                <span>−₹{summary.discount}</span>
+                <span>−₹{(preview?.couponDiscount ?? summary.discount).toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between"><span>Shipping</span><span>₹{summary.shipping}</span></div>
-            <div className="flex justify-between"><span>GST</span><span>₹{summary.gst}</span></div>
-            {loyaltyDiscountAmount > 0 && (
+            <div className="flex justify-between">
+              <span>Shipping</span>
+              <span>₹{(preview?.shipping ?? summary.shipping).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>GST{preview ? ` (${Math.round(preview.gstRate * 100)}%)` : ''}</span>
+              <span>₹{(preview?.gst ?? summary.gst).toFixed(2)}</span>
+            </div>
+            {(preview ? preview.loyaltyDiscount > 0 : loyaltyDiscountAmount > 0) && (
               <div className="flex justify-between text-yellow-700 font-medium">
                 <span>🏆 Loyalty ({loyaltyPointsToUse} pts)</span>
-                <span>−₹{loyaltyDiscountAmount.toFixed(2)}</span>
+                <span>−₹{(preview?.loyaltyDiscount ?? loyaltyDiscountAmount).toFixed(2)}</span>
               </div>
             )}
-            {storeCreditToApply > 0 && (
+            {(preview ? preview.storeCreditApplied > 0 : storeCreditToApply > 0) && (
               <div className="flex justify-between text-green-700 font-medium">
                 <span>⚡ Store Credit</span>
-                <span>−₹{storeCreditToApply.toFixed(2)}</span>
+                <span>−₹{(preview?.storeCreditApplied ?? storeCreditToApply).toFixed(2)}</span>
               </div>
             )}
-            {giftCardToApply > 0 && (
+            {(preview ? preview.giftCardDiscount > 0 : giftCardToApply > 0) && (
               <div className="flex justify-between text-slate-900 font-medium">
                 <span>🎁 Gift Card</span>
-                <span>−₹{giftCardToApply.toFixed(2)}</span>
+                <span>−₹{(preview?.giftCardDiscount ?? giftCardToApply).toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -479,7 +419,7 @@ export const CheckoutPageModule = () => {
             <span className="text-base font-bold text-slate-900">
               {paymentMethod === 'COD' ? 'Due on delivery' : 'Total payable'}
             </span>
-            <span className="text-base font-bold text-slate-900">₹{finalTotal}</span>
+            <span className="text-base font-bold text-slate-900">₹{finalTotal.toFixed(2)}</span>
           </div>
 
           {lines.length > 0 && (
@@ -504,8 +444,8 @@ export const CheckoutPageModule = () => {
             {placing
               ? 'Processing…'
               : paymentMethod === 'COD'
-                ? `Place COD Order — ₹${finalTotal}`
-                : `Pay ₹${finalTotal}`}
+                ? `Place COD Order — ₹${finalTotal.toFixed(2)}`
+                : `Pay ₹${finalTotal.toFixed(2)}`}
           </Button>
           <p className="mt-2 text-center text-[10px] text-slate-400">
             By placing this order you agree to our terms and conditions.

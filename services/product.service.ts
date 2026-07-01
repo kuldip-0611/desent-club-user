@@ -104,6 +104,7 @@ export type ProductReview = {
   rating: number
   comment: string | null
   createdAt: string
+  userId: string
   user: { name: string }
 }
 

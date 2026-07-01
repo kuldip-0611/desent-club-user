@@ -893,7 +893,7 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
       )}
 
       {/* ── Write a review (only if user has delivered order with this product) ── */}
-      {user && deliveredItems.length > 0 && !reviewSubmitted && (
+      {user && deliveredItems.length > 0 && !reviewSubmitted && !reviews.some(r => r.userId === user.id) && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-900">
           <h2 className="text-xl font-bold">Write a Review</h2>
           <p className="mt-1 text-sm text-slate-500">Share your experience with this product.</p>

@@ -16,11 +16,23 @@ const formatDate = (iso: string) =>
     year: 'numeric',
   })
 
+const STATUS_FILTERS = [
+  { label: 'All',        value: '' },
+  { label: 'Pending',    value: 'PENDING' },
+  { label: 'Confirmed',  value: 'CONFIRMED' },
+  { label: 'Processing', value: 'PROCESSING' },
+  { label: 'Shipped',    value: 'SHIPPED' },
+  { label: 'Delivered',  value: 'DELIVERED' },
+  { label: 'Cancelled',  value: 'CANCELLED' },
+]
+
 export const OrdersPageModule = () => {
   const searchParams = useSearchParams()
   const { user, requireAuth, isAuthReady } = useAuthGuard()
   const [orders, setOrders] = useState<UserOrder[]>([])
   const [loading, setLoading] = useState(false)
+  const [activeFilter, setActiveFilter] = useState('')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     const placed = searchParams.get('placed')
@@ -32,13 +44,24 @@ export const OrdersPageModule = () => {
   useEffect(() => {
     if (!user) return
     setLoading(true)
-    listMyOrders()
+    listMyOrders(1, 100)
       .then((res) => setOrders(res.items))
       .catch((error) => {
         toast.error(error instanceof Error ? error.message : 'Could not load orders')
       })
       .finally(() => setLoading(false))
   }, [user])
+
+  const filteredOrders = orders.filter((order) => {
+    if (activeFilter && order.status !== activeFilter) return false
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      const matchesId = order.id.toLowerCase().includes(q)
+      const matchesProduct = order.items.some((i) => i.product.name.toLowerCase().includes(q))
+      if (!matchesId && !matchesProduct) return false
+    }
+    return true
+  })
 
   if (!isAuthReady) {
     return (
@@ -66,7 +89,40 @@ export const OrdersPageModule = () => {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="mb-3 text-2xl font-bold">Orders</h1>
+      <h1 className="mb-4 text-2xl font-bold">Orders</h1>
+
+      {/* Search */}
+      <div className="mb-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by order ID or product name…"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-white"
+        />
+      </div>
+
+      {/* Status filter tabs */}
+      <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => setActiveFilter(f.value)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              activeFilter === f.value
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+            }`}
+          >
+            {f.label}
+            {f.value !== '' && (
+              <span className="ml-1 opacity-60">
+                ({orders.filter((o) => o.status === f.value).length})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {loading ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">
@@ -81,13 +137,18 @@ export const OrdersPageModule = () => {
           </div>
           <h3 className="mb-1.5 text-lg font-semibold text-slate-700 dark:text-slate-300">No orders yet</h3>
           <p className="mb-6 max-w-xs text-sm text-slate-500">You haven&apos;t placed any orders yet. Start shopping and your orders will appear here.</p>
-          <a href="/shop" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+          <a href="/products" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
             Shop Now
           </a>
         </div>
+      ) : filteredOrders.length === 0 && orders.length > 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/50">
+          <p className="font-medium text-slate-700 dark:text-slate-300">No orders match your filter</p>
+          <button onClick={() => { setActiveFilter(''); setSearch('') }} className="mt-3 text-sm text-indigo-600 underline">Clear filters</button>
+        </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => {
+          {filteredOrders.map((order) => {
             const returnStatus = order.returnRequests?.[0]?.status ?? order.actions?.returnStatus
             return (
               <article

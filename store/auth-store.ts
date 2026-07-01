@@ -29,9 +29,26 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: response.refreshToken,
           user: response.user,
         })
-        // Sync wishlist after login (import lazily to avoid circular deps)
+        // Merge guest cart into server cart, then load server state
+        import('@/store/cart-store').then(({ useCartStore }) => {
+          const guestLines = [...useCartStore.getState().lines]
+          useCartStore.getState().loadFromServer().then(() => {
+            if (guestLines.length > 0) {
+              const serverVariantIds = new Set(
+                useCartStore.getState().lines.map((l) => l.variantId),
+              )
+              guestLines
+                .filter((l) => !serverVariantIds.has(l.variantId))
+                .forEach((l) => useCartStore.getState().addLine(l))
+            }
+            // Remove guest cart from localStorage — server is now the source of truth
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(STORAGE_KEYS.cart)
+            }
+          }).catch(() => undefined)
+        })
         import('@/store/wishlist-store').then(({ useWishlistStore }) => {
-          useWishlistStore.getState().syncToServer().catch(() => undefined)
+          useWishlistStore.getState().syncFromServer().catch(() => undefined)
         })
       },
       logout: async () => {
@@ -42,6 +59,14 @@ export const useAuthStore = create<AuthState>()(
         }
         clearAuthSession()
         set({ accessToken: null, refreshToken: null, user: null })
+        // Clear cart and wishlist — both memory and localStorage
+        import('@/store/cart-store').then(({ useCartStore }) => {
+          useCartStore.setState({ lines: [], couponCode: null, couponDiscount: 0 })
+          if (typeof window !== 'undefined') localStorage.removeItem(STORAGE_KEYS.cart)
+        })
+        import('@/store/wishlist-store').then(({ useWishlistStore }) => {
+          useWishlistStore.setState({ productIds: [] })
+        })
       },
       syncFromStorage: () => {
         const user = getStoredAuthUser()

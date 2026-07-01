@@ -27,10 +27,12 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
       const title = `${product.name} | Disent Club`
       const description = product.description?.slice(0, 160) || `Buy ${product.name} at Disent Club — premium clothing delivered to your door.`
       const productImage = product.images[0]
-      // Use dynamic OG route to produce a landscape 1200×630 image (WhatsApp/social requires landscape)
-      const ogImageUrl = productImage
-        ? `${SITE_URL}/api/og?title=${encodeURIComponent(product.name)}&subtitle=${encodeURIComponent((product.category?.name) ?? 'Disent Club')}&image=${encodeURIComponent(productImage)}`
-        : `${SITE_URL}/og-image.jpg`
+      // Use direct S3 URL — instant response for WhatsApp/Telegram bots.
+      // The /api/og dynamic generator takes ~2s to run which risks bot timeouts.
+      // Portrait product images (800×1200) display fine on WhatsApp.
+      const ogImageUrl = productImage ?? `${SITE_URL}/og-image.jpg`
+      const ogImageWidth = productImage ? 800 : 1200
+      const ogImageHeight = productImage ? 1200 : 630
 
       return {
         title,
@@ -39,7 +41,7 @@ export async function generateMetadata({ params }: ProductDetailRouteProps): Pro
           title,
           description,
           url: `${SITE_URL}/products/${slug}`,
-          images: [{ url: ogImageUrl, width: 1200, height: 630, alt: product.name }],
+          images: [{ url: ogImageUrl, width: ogImageWidth, height: ogImageHeight, alt: product.name }],
           type: 'website',
         },
         twitter: {

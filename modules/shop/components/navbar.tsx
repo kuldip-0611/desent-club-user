@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, Menu, Moon, Search, ShoppingBag, Sun, User, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -29,6 +29,7 @@ export const Navbar = () => {
   const searchRef = useRef<HTMLDivElement>(null)
   const mobileSearchRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const pathname = usePathname()
   const debouncedSearch = useDebounce(search, 300)
   const debouncedMobileSearch = useDebounce(mobileSearch, 300)
   const lines = useCartStore((s) => s.lines)
@@ -96,10 +97,19 @@ export const Navbar = () => {
 
   const closeMobile = () => setMobileOpen(false)
 
-  const mobileLinkClass = cn(
-    'block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-    isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-800 hover:bg-slate-100',
-  )
+  const mobileLinkClass = (href: string) => {
+    const isActive = pathname === href || (href !== '/home' && pathname.startsWith(href))
+    return cn(
+      'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+      isActive
+        ? isDark
+          ? 'bg-slate-800 text-white'
+          : 'bg-slate-100 text-slate-900'
+        : isDark
+          ? 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
+    )
+  }
 
   return (
     <>
@@ -118,34 +128,51 @@ export const Navbar = () => {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/home" className="flex items-center gap-2">
-            <Image src="/icon.png" alt="Disent Club logo" width={44} height={44} className="h-11 w-11 shrink-0 rounded-md" />
+          <Link href="/home" className="flex items-center gap-2.5">
+            <Image src="/logo-nav.png" alt="Disent Club" width={48} height={48} className="h-12 w-12 shrink-0 object-contain" unoptimized />
           </Link>
 
-          <nav className="hidden items-center gap-6 lg:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'whitespace-nowrap rounded-md px-2 py-1 text-sm font-medium transition-colors',
-                  isDark
-                    ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'relative whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? isDark
+                        ? 'bg-slate-800 text-white'
+                        : 'bg-slate-100 text-slate-900'
+                      : isDark
+                        ? 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                  )}
+                >
+                  {item.label}
+                  {isActive && (
+                    <span className={cn(
+                      'absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full',
+                      isDark ? 'bg-white' : 'bg-slate-900',
+                    )} />
+                  )}
+                </Link>
+              )
+            })}
             <button
               type="button"
               onMouseEnter={() => setMegaMenuOpen(true)}
               onMouseLeave={() => setMegaMenuOpen(false)}
               className={cn(
-                'rounded-md px-2 py-1 text-sm font-medium transition-colors',
-                isDark
-                  ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
+                'relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                pathname.startsWith('/products?category') || megaMenuOpen
+                  ? isDark
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-900'
+                  : isDark
+                    ? 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
               )}
             >
               Categories
@@ -298,25 +325,26 @@ export const Navbar = () => {
             >
               <div className="mx-auto grid max-w-7xl grid-cols-4 gap-4 p-6">
                 {categories.map((cat) => (
-                  <div key={cat.id} className={cn('rounded-xl border p-4', isDark ? 'border-slate-800' : 'border-slate-200')}>
-                    <Link
-                      href={`/products?category=${cat.slug}`}
-                      onClick={() => setMegaMenuOpen(false)}
-                      className={cn('text-sm font-semibold transition-colors', isDark ? 'text-slate-100 hover:text-white' : 'text-slate-900 hover:text-slate-600')}
-                    >
+                  <Link
+                    key={cat.id}
+                    href={`/products?category=${cat.slug}`}
+                    onClick={() => setMegaMenuOpen(false)}
+                    className={cn('relative rounded-xl border p-4 transition-colors', isDark ? 'border-slate-800 hover:bg-slate-800/60' : 'border-slate-200 hover:bg-slate-50')}
+                  >
+                    <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>
                       {cat.name}
-                    </Link>
+                    </p>
                     {cat.subcategories.length > 0 ? (
                       <ul className="mt-3 space-y-1.5">
                         {cat.subcategories.map((sub) => (
                           <li key={sub.id}>
-                            <Link
-                              href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
-                              onClick={() => setMegaMenuOpen(false)}
-                              className={cn('text-xs transition-colors', isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-600 hover:text-slate-900')}
+                            <span
+                              role="link"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMegaMenuOpen(false); window.location.href = `/products?category=${cat.slug}&subcategory=${sub.slug}` }}
+                              className={cn('cursor-pointer text-xs transition-colors', isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-600 hover:text-slate-900')}
                             >
                               {sub.name}
-                            </Link>
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -325,7 +353,7 @@ export const Navbar = () => {
                         View all {cat.name.toLowerCase()}
                       </p>
                     )}
-                  </div>
+                  </Link>
                 ))}
                 <Link
                   href="/products?audience=MEN"
@@ -449,59 +477,58 @@ export const Navbar = () => {
                   )}
                 </div>
 
-                {navItems.map((item) => (
-                  <Link key={item.href} href={item.href} className={mobileLinkClass} onClick={closeMobile}>
-                    {item.label}
-                  </Link>
-                ))}
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href || (item.href !== '/home' && pathname.startsWith(item.href))
+                  return (
+                    <Link key={item.href} href={item.href} className={mobileLinkClass(item.href)} onClick={closeMobile}>
+                      {item.label}
+                      {isActive && (
+                        <span className={cn('h-1.5 w-1.5 rounded-full', isDark ? 'bg-white' : 'bg-slate-900')} />
+                      )}
+                    </Link>
+                  )
+                })}
                 <div className={cn('mt-4 border-t pt-4', isDark ? 'border-slate-800' : 'border-slate-200')}>
                   <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Categories
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {categories.map((cat) => (
-                      <div
+                      <Link
                         key={cat.id}
+                        href={`/products?category=${cat.slug}`}
+                        onClick={closeMobile}
                         className={cn(
-                          'rounded-xl border p-3',
-                          isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-slate-50',
+                          'rounded-xl border p-3 transition-colors',
+                          isDark ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/60' : 'border-slate-200 bg-slate-50 hover:bg-slate-100',
                         )}
                       >
-                        <Link
-                          href={`/products?category=${cat.slug}`}
-                          className={cn(
-                            'block text-sm font-semibold',
-                            isDark ? 'text-slate-100 hover:text-slate-300' : 'text-slate-900 hover:text-slate-600',
-                          )}
-                          onClick={closeMobile}
-                        >
+                        <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>
                           {cat.name}
-                        </Link>
+                        </p>
                         {cat.subcategories.length > 0 ? (
                           <div className="mt-2 space-y-0.5 border-l-2 border-slate-300 pl-3">
                             {cat.subcategories.map((sub) => (
-                              <Link
+                              <span
                                 key={sub.id}
-                                href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
+                                role="link"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeMobile(); window.location.href = `/products?category=${cat.slug}&subcategory=${sub.slug}` }}
                                 className={cn(
-                                  'block rounded-md py-1.5 text-xs',
-                                  isDark
-                                    ? 'text-slate-400 hover:text-slate-300'
-                                    : 'text-slate-600 hover:text-slate-600',
+                                  'block cursor-pointer rounded-md py-1.5 text-xs',
+                                  isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-900',
                                 )}
-                                onClick={closeMobile}
                               >
                                 {sub.name}
-                              </Link>
+                              </span>
                             ))}
                           </div>
                         ) : null}
-                      </div>
+                      </Link>
                     ))}
-                    <Link href="/products?audience=MEN" className={mobileLinkClass} onClick={closeMobile}>
+                    <Link href="/products?audience=MEN" className={mobileLinkClass('/products?audience=MEN')} onClick={closeMobile}>
                       Men
                     </Link>
-                    <Link href="/products?audience=WOMEN" className={mobileLinkClass} onClick={closeMobile}>
+                    <Link href="/products?audience=WOMEN" className={mobileLinkClass('/products?audience=WOMEN')} onClick={closeMobile}>
                       Women
                     </Link>
                   </div>

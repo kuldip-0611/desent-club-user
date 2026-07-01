@@ -71,39 +71,57 @@ export const ProfilePageModule = () => {
           </div>
 
           {/* ── Loyalty Points ── */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900">Loyalty Points</h2>
-              <Link href="/loyalty" className="text-xs font-medium text-slate-900 hover:underline">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-5 pt-5">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Loyalty Points</h2>
+              <Link href="/loyalty" className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline dark:text-slate-400 dark:hover:text-white">
                 View history →
               </Link>
             </div>
             {loyalty ? (
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex h-16 w-16 flex-shrink-0 flex-col items-center justify-center rounded-2xl bg-black text-white">
-                  <span className="text-xl font-bold leading-none">{loyalty.balance.toLocaleString()}</span>
-                  <span className="text-[9px] text-slate-400">pts</span>
+              <>
+                {/* Balance banner */}
+                <div className="mx-5 mt-3 flex items-center justify-between rounded-xl bg-slate-900 px-4 py-3 dark:bg-slate-800">
+                  <div>
+                    <p className="text-xs font-medium text-slate-400">Available balance</p>
+                    <p className="mt-0.5 text-2xl font-bold tracking-tight text-white">
+                      {loyalty.balance.toLocaleString()}
+                      <span className="ml-1 text-sm font-medium text-slate-400">pts</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium text-slate-400">≈ Value</p>
+                    <p className="mt-0.5 text-lg font-bold text-amber-400">₹{rupeeValue}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">
-                    ≈ ₹{rupeeValue} redeemable
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {loyalty.totalEarned.toLocaleString()} earned · {loyalty.totalRedeemed.toLocaleString()} redeemed
-                  </p>
-                  {rules && loyalty.balance >= rules.minRedeemPoints ? (
-                    <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
-                      ✓ Redeemable at checkout
-                    </span>
-                  ) : rules ? (
-                    <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
-                      Need {rules.minRedeemPoints} pts to redeem
-                    </span>
-                  ) : null}
+                {/* Stats row */}
+                <div className="flex gap-0 divide-x divide-slate-100 px-5 py-3 dark:divide-slate-800">
+                  <div className="flex-1 pr-4">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Earned</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{loyalty.totalEarned.toLocaleString()}</p>
+                  </div>
+                  <div className="flex-1 px-4">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Redeemed</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{loyalty.totalRedeemed.toLocaleString()}</p>
+                  </div>
+                  <div className="flex-1 pl-4">
+                    {rules && loyalty.balance >= rules.minRedeemPoints ? (
+                      <>
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-green-600">Status</p>
+                        <p className="mt-0.5 text-xs font-bold text-green-600">✓ Ready to use</p>
+                      </>
+                    ) : rules ? (
+                      <>
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Need</p>
+                        <p className="mt-0.5 text-xs font-semibold text-slate-600 dark:text-slate-300">{(rules.minRedeemPoints - loyalty.balance).toLocaleString()} more</p>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
-              <p className="mt-3 text-sm text-slate-400">Loading…</p>
+              <p className="px-5 pb-5 pt-3 text-sm text-slate-400">Loading…</p>
             )}
           </div>
 

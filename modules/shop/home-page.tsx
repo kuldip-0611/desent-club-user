@@ -199,7 +199,7 @@ export const HomePageModule = () => {
   const newArrivals = data?.newest ?? []
 
   return (
-    <main className="mx-auto max-w-7xl space-y-14 px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
       <section>
         {isLoading ? (
           <div className={`grid items-stretch gap-4 ${perSlide === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
@@ -214,7 +214,7 @@ export const HomePageModule = () => {
 
       <section>
         <h2 className="mb-5 text-2xl font-bold">Shop by category</h2>
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
           {isLoading
             ? Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">

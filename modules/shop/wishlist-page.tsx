@@ -4,16 +4,24 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useQuery } from '@tanstack/react-query'
 import { ProductCard } from '@/modules/shop/components/product-card'
+import { ProductCardSkeleton } from '@/modules/shop/components/product-card-skeleton'
 import { listProducts } from '@/services/product.service'
 import { useWishlistStore } from '@/store/wishlist-store'
 import type { Product } from '@/types/product'
 
 export const WishlistPageModule = () => {
   const ids = useWishlistStore((s) => s.productIds)
-  const reconcile = useWishlistStore((s) => s.reconcile)
   const idsKey = ids.join(',')
 
-  const { data, isSuccess } = useQuery({
+  // Track whether the initial server sync has completed (prevents showing empty
+  // state while wishlist IDs are still being fetched from the server)
+  const [syncReady, setSyncReady] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSyncReady(true), 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const { data, isSuccess, isLoading: isQueryLoading } = useQuery({
     queryKey: ['wishlist-products', idsKey],
     queryFn: () => listProducts({ ids: idsKey, limit: ids.length }),
     enabled: ids.length > 0,
@@ -25,12 +33,9 @@ export const WishlistPageModule = () => {
     return ids.map((id) => map.get(id)).filter(Boolean) as Product[]
   }, [data?.items, ids])
 
-  // Drop ids whose product was deleted/unavailable so the badge count matches what's shown
-  useEffect(() => {
-    if (isSuccess && data) {
-      reconcile((data.items ?? []).map((p) => p.id))
-    }
-  }, [isSuccess, data, reconcile])
+  // NOTE: intentionally not reconciling from shop products API — a product being
+  // temporarily unavailable should not permanently remove it from the user's wishlist.
+  // Wishlist store is managed solely by /wishlist/* endpoints.
 
   const [sharing, setSharing] = useState(false)
 
@@ -40,6 +45,9 @@ export const WishlistPageModule = () => {
       return
     }
     setSharing(true)
+    // Use ids directly — the canonical wishlist from the server.
+    // items may be a subset (unavailable products filtered), but the share URL
+    // should reflect everything the user wished so the recipient sees all picks.
     const shareUrl = `${window.location.origin}/wishlist/shared?ids=${ids.join(',')}`
     try {
       if (navigator.share) {
@@ -73,7 +81,12 @@ export const WishlistPageModule = () => {
           </button>
         )}
       </div>
-      {items.length === 0 ? (
+      {/* Loading skeletons while data syncs from server */}
+      {!syncReady || isQueryLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+        </div>
+      ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 py-20 text-center dark:border-slate-700 dark:bg-slate-900/50">
           <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-800">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -86,12 +99,13 @@ export const WishlistPageModule = () => {
             Discover Products
           </a>
         </div>
-      ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item) => (
-          <ProductCard key={item.id} product={item} wishlistMode />
-        ))}
-      </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((item) => (
+            <ProductCard key={item.id} product={item} wishlistMode />
+          ))}
+        </div>
+      )}
     </main>
   )
 }

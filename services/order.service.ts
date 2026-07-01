@@ -41,6 +41,26 @@ export type VerifyPaymentResponse = {
   orderId: string
 }
 
+export type OrderPreviewResponse = {
+  subtotal: number
+  couponDiscount: number
+  shipping: number
+  gst: number
+  gstRate: number
+  loyaltyDiscount: number
+  storeCreditApplied: number
+  giftCardDiscount: number
+  total: number
+  lineItems: { productId: string; name: string; unitPrice: number; quantity: number; total: number }[]
+}
+
+export const previewOrder = async (
+  payload: Pick<CreateOrderPayload, 'items' | 'couponCode' | 'loyaltyPoints' | 'storeCreditAmount' | 'giftCardCode'>,
+): Promise<OrderPreviewResponse> => {
+  const { data } = await apiClient.post<OrderPreviewResponse>('/orders/preview', payload)
+  return data
+}
+
 export const createOrder = async (payload: CreateOrderPayload): Promise<CreateOrderResponse> => {
   const { data } = await apiClient.post<CreateOrderResponse>('/orders', payload)
   return data
@@ -139,6 +159,7 @@ export type OrderTracking = {
   awbCode: string | null
   courierName: string | null
   trackingUrl: string | null
+  shippingStatus: string | null
   shiprocketTracking: Record<string, unknown> | null
 }
 

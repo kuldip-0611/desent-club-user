@@ -21,7 +21,7 @@ export const useInfiniteProductsQuery = (filters: Omit<ProductFilters, 'page'>) 
     queryKey: ['products-infinite', filters],
     queryFn: ({ pageParam }) => listProducts({ ...filters, page: Number(pageParam), limit: 8 }),
     initialPageParam: 1,
-    getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
+    getNextPageParam: (last) => (last.hasNextPage && last.items.length > 0 ? last.page + 1 : undefined),
   })
 
 export const useProductQuery = (slug: string) =>

@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, Search, SlidersHorizontal, X, PackageSearch } from 'lucide-react'
+import { Search, SlidersHorizontal, X, PackageSearch, Tag } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
 import { ProductCardSkeleton } from '@/modules/shop/components/product-card-skeleton'
 import { QuickViewModal } from '@/modules/shop/components/quick-view-modal'
 import { Input } from '@/components/ui/input'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useInfiniteProductsQuery, useShopCategoriesQuery } from '@/hooks/query/use-products-query'
-import { useUiStore } from '@/store/ui-store'
+import { useProductsQuery } from '@/hooks/query/use-products-query'
 import { apiClient } from '@/services/api/client'
+import { getActiveBundles, type ActiveBundle } from '@/services/bundle.service'
 
 type FilterOptions = {
   colors: string[]
@@ -23,6 +24,8 @@ type ProductsPageModuleProps = {
   initialCategory?: string
   initialAudience?: string
   initialSubcategory?: string
+  initialSearch?: string
+  initialBundleId?: string
 }
 
 type ProductFilters = {
@@ -71,10 +74,26 @@ export const ProductsPageModule = ({
   initialCategory = 'all',
   initialAudience = 'all',
   initialSubcategory = '',
+  initialSearch = '',
+  initialBundleId = '',
 }: ProductsPageModuleProps) => {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const openModal = useUiStore((s) => s.openModal)
+
+  // Bundle filtering — when ?bundleId= is in URL, fetch that bundle and restrict to its product IDs
+  const bundleId = searchParams.get('bundleId') ?? initialBundleId
+  const [activeBundle, setActiveBundle] = useState<ActiveBundle | null>(null)
+  const [bundleIds, setBundleIds] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!bundleId) { setActiveBundle(null); setBundleIds(null); return }
+    getActiveBundles().then((bundles) => {
+      const found = bundles.find((b) => b.id === bundleId) ?? null
+      setActiveBundle(found)
+      setBundleIds(found ? found.productIds.join(',') : null)
+    }).catch(() => { setActiveBundle(null); setBundleIds(null) })
+  }, [bundleId])
+
   const fallbackFilters = useMemo<ProductFilters>(
     () => ({
       category: initialCategory,
@@ -99,8 +118,14 @@ export const ProductsPageModule = ({
     router.replace(qs ? `/products?${qs}` : '/products', { scroll: false })
   }
   const [sort, setSort] = useState<'featured' | 'price-low' | 'price-high' | 'rating'>('featured')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? initialSearch)
   const debouncedSearch = useDebounce(search, 300)
+
+  // Sync search from URL when navigating to this page with ?search= (e.g. from navbar "See all results")
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') ?? ''
+    setSearch(urlSearch)
+  }, [searchParams])
   const { data: categories = [] } = useShopCategoriesQuery()
 
   // Advanced filters state
@@ -120,7 +145,9 @@ export const ProductsPageModule = ({
       .catch(() => {/* ignore */})
   }, [])
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteProductsQuery({
+  // When in bundle mode: use simple query with ids (backend fast-path, no pagination limit)
+  const bundleQuery = useProductsQuery({ ids: bundleIds ?? '' })
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading: infiniteLoading } = useInfiniteProductsQuery({
     category: category as 'all',
     subcategory: subcategory?.trim() ? subcategory.trim().toLowerCase() : undefined,
     audience: audience as 'all',
@@ -133,7 +160,12 @@ export const ProductsPageModule = ({
     minRating,
   })
 
-  const products = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data])
+  const isBundleMode = !!bundleId
+  const isLoading = isBundleMode ? (bundleIds === null || bundleQuery.isLoading) : infiniteLoading
+  const products = useMemo(
+    () => isBundleMode ? (bundleQuery.data?.items ?? []) : (data?.pages.flatMap((page) => page.items) ?? []),
+    [isBundleMode, bundleQuery.data, data],
+  )
   const activeCategory = useMemo(() => categories.find((c) => c.slug === category), [categories, category])
   const subcategoryOptions = useMemo(() => activeCategory?.subcategories ?? [], [activeCategory])
 
@@ -185,18 +217,52 @@ export const ProductsPageModule = ({
 
   return (
     <main className="mx-auto max-w-7xl space-y-3 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-8">
+      {/* ── Bundle banner ── */}
+      {isBundleMode && activeBundle && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800/40 dark:bg-violet-950/30">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/50">
+              <Tag className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">Bundle Deal</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100">{activeBundle.name}</p>
+              {activeBundle.description && <p className="text-xs text-slate-500">{activeBundle.description}</p>}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-violet-600 px-3 py-1 text-sm font-bold text-white">
+              {activeBundle.discountType === 'PERCENT'
+                ? `Buy any ${activeBundle.minItems} — ${activeBundle.discountValue}% off`
+                : `Buy any ${activeBundle.minItems} — ₹${activeBundle.discountValue} off`}
+            </span>
+            <button
+              onClick={() => router.replace('/products', { scroll: false })}
+              className="rounded-full p-1 text-slate-400 hover:bg-violet-100 dark:hover:bg-violet-900/30"
+              aria-label="Clear bundle filter"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div>
-        <h1 className="text-xl font-bold sm:text-2xl">{activeCategory ? activeCategory.name : 'Products'}</h1>
+        <h1 className="text-xl font-bold sm:text-2xl">
+          {isBundleMode && activeBundle ? `${activeBundle.name} Products` : activeCategory ? activeCategory.name : 'Products'}
+        </h1>
         <p className="text-xs text-slate-500 sm:text-sm">
-          {activeCategory
-            ? `Browse ${activeCategory.name.toLowerCase()}${subcategory.trim() ? ` · ${subcategoryOptions.find((s) => s.slug === subcategory.trim().toLowerCase())?.name ?? subcategory}` : ''}`
-            : 'Discover premium fits.'}
+          {isBundleMode && activeBundle
+            ? `${products.length} products in this bundle deal`
+            : activeCategory
+              ? `Browse ${activeCategory.name.toLowerCase()}${subcategory.trim() ? ` · ${subcategoryOptions.find((s) => s.slug === subcategory.trim().toLowerCase())?.name ?? subcategory}` : ''}`
+              : 'Discover premium fits.'}
         </p>
       </div>
 
-      {/* ── Controls: single scrollable row on mobile ── */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
+      {/* ── Controls: hidden in bundle mode ── */}
+      {!isBundleMode && <div className="flex items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
         {/* Filters button */}
         <button
           onClick={() => setShowFilters((v) => !v)}
@@ -256,10 +322,10 @@ export const ProductsPageModule = ({
           </select>
           <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 sm:right-3 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/></svg>
         </div>
-      </div>
+      </div>}
 
-      {/* ── Subcategory pills — horizontally scrollable on mobile ── */}
-      {category !== 'all' && subcategoryOptions.length > 0 && (
+      {/* ── Subcategory pills — hidden in bundle mode ── */}
+      {!isBundleMode && category !== 'all' && subcategoryOptions.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:gap-2 sm:overflow-visible">
           <button
             type="button"
@@ -282,8 +348,8 @@ export const ProductsPageModule = ({
         </div>
       )}
 
-      {/* ── Advanced filter panel ── */}
-      {showFilters && filterOptions && (
+      {/* ── Advanced filter panel — hidden in bundle mode ── */}
+      {!isBundleMode && showFilters && filterOptions && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-4 flex items-center justify-between">
             <p className="font-semibold text-slate-800 dark:text-slate-100">Filter products</p>
@@ -405,36 +471,40 @@ export const ProductsPageModule = ({
         </div>
       )}
 
-      <div className="relative">
+      {!isBundleMode && <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-400" />
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const trimmed = search.trim()
+              const current = searchParams.get('search') ?? ''
+              if (trimmed === current) return
+              const next = new URLSearchParams(searchParams.toString())
+              if (trimmed) {
+                next.set('search', trimmed)
+              } else {
+                next.delete('search')
+              }
+              router.replace(`/products${next.toString() ? `?${next.toString()}` : ''}`, { scroll: false })
+            }
+          }}
           placeholder="Search by product name..."
           className="h-9 pl-9 text-sm sm:h-10"
         />
-      </div>
+      </div>}
 
       {/* Product grid */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         {isLoading
           ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)
           : products.map((product) => (
-              <div key={product.id} className="relative">
-                <ProductCard product={product} />
-                <button
-                  type="button"
-                  onClick={() => openModal('quickView', { productId: product.id })}
-                  className="absolute right-2 top-2 z-10 rounded-full bg-black/55 p-2 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/75 sm:right-3 sm:top-3"
-                  aria-label="Quick view"
-                >
-                  <Eye className="h-4 w-4" strokeWidth={2.25} />
-                </button>
-              </div>
+              <ProductCard key={product.id} product={product} showQuickView />
             ))}
 
-        {/* Skeleton rows while fetching next page */}
-        {isFetchingNextPage
+        {/* Skeleton rows while fetching next page — only in normal mode */}
+        {!isBundleMode && isFetchingNextPage
           ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={`next-${i}`} />)
           : null}
       </div>
@@ -465,9 +535,9 @@ export const ProductsPageModule = ({
                 <X className="h-3 w-3" /> Clear search
               </button>
             )}
-            {(category || subcategory || audience) && (
+            {(hasActiveFilters || category !== 'all' || subcategory || (audience && audience !== 'all')) && (
               <button
-                onClick={() => updateProductFilters({ category: '', subcategory: '', audience: '' })}
+                onClick={() => { clearFilters(); updateProductFilters({ category: 'all', subcategory: '', audience: 'all' }) }}
                 className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 <X className="h-3 w-3" /> Clear filters
@@ -477,8 +547,8 @@ export const ProductsPageModule = ({
         </div>
       ) : null}
 
-      {/* Intersection observer sentinel */}
-      <div ref={sentinelRef} className="h-1" aria-hidden />
+      {/* Intersection observer sentinel — only in normal mode */}
+      {!isBundleMode && <div ref={sentinelRef} className="h-1" aria-hidden />}
 
       <QuickViewModal />
     </main>

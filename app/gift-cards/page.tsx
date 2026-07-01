@@ -1,11 +1,13 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { StoreShell } from '@/modules/shop/components/store-shell'
 import { toast } from 'react-hot-toast'
-import { Gift, CheckCircle2, CreditCard, Copy, Loader2 } from 'lucide-react'
+import { Gift, CheckCircle2, CreditCard, Copy, Loader2, LogIn } from 'lucide-react'
 import { useAuthStore } from '@/store/auth-store'
+import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { apiClient } from '@/services/api/client'
 import { loadRazorpayScript, type RazorpaySuccessResponse } from '@/lib/razorpay'
 
@@ -58,8 +60,9 @@ function GiftCardVisual({ code, amount, balance }: { code: string; amount: numbe
 type Tab = 'buy' | 'my-cards' | 'check'
 
 export default function GiftCardsPage() {
-  const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const { requireAuth } = useAuthGuard()
+  const [mounted, setMounted] = useState(false)
   const [tab, setTab] = useState<Tab>('buy')
 
   // Purchase form state
@@ -79,18 +82,25 @@ export default function GiftCardsPage() {
   const [checkResult, setCheckResult] = useState<{ code: string; balance: number; initialAmount: number; expiresAt: string | null } | null>(null)
   const [checking, setChecking] = useState(false)
 
+  // Wait for auth store to hydrate before making any auth-based decisions
+  useEffect(() => { setMounted(true) }, [])
+
   useEffect(() => {
-    if (user === null) { router.replace('/login'); return }
-    if (user && tab === 'my-cards') {
-      setLoadingCards(true)
-      apiClient.get<GiftCard[]>('/gift-cards/my')
-        .then((res) => setCards(res.data))
-        .catch(() => undefined)
-        .finally(() => setLoadingCards(false))
-    }
-  }, [user, router, tab])
+    if (!mounted || !user || tab !== 'my-cards') return
+    setLoadingCards(true)
+    apiClient.get<GiftCard[]>('/gift-cards/my')
+      .then((res) => setCards(res.data))
+      .catch(() => undefined)
+      .finally(() => setLoadingCards(false))
+  }, [mounted, user, tab])
 
   const handlePay = async () => {
+    // Show auth modal if not logged in — don't navigate away
+    if (!user) {
+      requireAuth(() => void handlePay())
+      return
+    }
+
     const amtNum = Number(amount)
     if (!amtNum || amtNum < 50) { toast.error('Minimum amount is ₹50'); return }
     if (amtNum > 10000) { toast.error('Maximum amount is ₹10,000'); return }
@@ -98,7 +108,6 @@ export default function GiftCardsPage() {
 
     setPaying(true)
     try {
-      // Step 1: create Razorpay order on backend
       const { data: initData } = await apiClient.post<{
         giftCardId: string
         razorpayOrderId: string
@@ -112,7 +121,6 @@ export default function GiftCardsPage() {
         message: message.trim() || undefined,
       })
 
-      // Step 2: open Razorpay checkout
       const loaded = await loadRazorpayScript()
       if (!loaded || !window.Razorpay) {
         toast.error('Could not load payment gateway. Please try again.')
@@ -135,7 +143,6 @@ export default function GiftCardsPage() {
           theme: { color: '#4f46e5' },
           handler: async (response: RazorpaySuccessResponse) => {
             try {
-              // Step 3: verify payment → activate gift card
               const { data: verified } = await apiClient.post<{
                 message: string
                 code: string
@@ -147,7 +154,6 @@ export default function GiftCardsPage() {
                 razorpaySignature: response.razorpay_signature,
               })
 
-              // Fetch the full gift card to show success UI
               const { data: myCards } = await apiClient.get<GiftCard[]>('/gift-cards/my')
               const newCard = myCards.find((c) => c.id === verified.giftCardId) ?? {
                 id: verified.giftCardId,
@@ -185,7 +191,6 @@ export default function GiftCardsPage() {
         rzp.open()
       })
     } catch (err) {
-      // Dismissed or failed — already toasted
       const e = err as Error
       if (e?.message && e.message !== 'dismissed' && e.message !== 'payment_failed') {
         const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -388,61 +393,80 @@ export default function GiftCardsPage() {
         {/* ── MY CARDS TAB ─────────────────────────────────────────────────── */}
         {tab === 'my-cards' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-900">Gift Cards I&apos;ve Sent</h2>
-            {loadingCards ? (
-              <div className="flex justify-center py-8">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-              </div>
-            ) : cards.length === 0 ? (
-              <div className="py-10 text-center">
-                <Gift className="mx-auto h-10 w-10 text-slate-200" />
-                <p className="mt-3 text-sm text-slate-400">You haven&apos;t sent any gift cards yet.</p>
+            {/* Not logged in — show sign-in prompt with modal, no redirect */}
+            {mounted && !user ? (
+              <div className="flex flex-col items-center py-10 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
+                  <LogIn className="h-6 w-6 text-indigo-500" />
+                </div>
+                <p className="font-semibold text-slate-800">Sign in to view your gift cards</p>
+                <p className="mt-1 text-sm text-slate-500">Your purchased gift cards will appear here.</p>
                 <button
-                  onClick={() => setTab('buy')}
-                  className="mt-4 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                  onClick={() => requireAuth(() => {})}
+                  className="mt-5 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
                 >
-                  Send your first gift card
+                  Sign in
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {cards.map((card) => {
-                  const isExpired = card.expiresAt ? new Date(card.expiresAt) < new Date() : false
-                  const used = card.initialAmount - card.balance
-                  const pct = Math.round((used / card.initialAmount) * 100)
-                  return (
-                    <div key={card.id} className="rounded-xl border border-slate-100 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-mono text-sm font-bold text-slate-900">{card.code}</p>
-                          <p className="mt-0.5 text-xs text-slate-500">To: {card.recipientEmail}</p>
-                          <p className="mt-0.5 text-xs text-slate-400">Sent {fmtDate(card.createdAt)}</p>
+              <>
+                <h2 className="mb-4 text-base font-semibold text-slate-900">Gift Cards I&apos;ve Sent</h2>
+                {loadingCards ? (
+                  <div className="flex justify-center py-8">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                  </div>
+                ) : cards.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <Gift className="mx-auto h-10 w-10 text-slate-200" />
+                    <p className="mt-3 text-sm text-slate-400">You haven&apos;t sent any gift cards yet.</p>
+                    <button
+                      onClick={() => setTab('buy')}
+                      className="mt-4 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                    >
+                      Send your first gift card
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cards.map((card) => {
+                      const isExpired = card.expiresAt ? new Date(card.expiresAt) < new Date() : false
+                      const used = card.initialAmount - card.balance
+                      const pct = Math.round((used / card.initialAmount) * 100)
+                      return (
+                        <div key={card.id} className="rounded-xl border border-slate-100 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-mono text-sm font-bold text-slate-900">{card.code}</p>
+                              <p className="mt-0.5 text-xs text-slate-500">To: {card.recipientEmail}</p>
+                              <p className="mt-0.5 text-xs text-slate-400">Sent {fmtDate(card.createdAt)}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-lg font-black text-slate-900">₹{card.balance.toFixed(0)}</p>
+                              <p className="text-xs text-slate-400">of ₹{card.initialAmount.toFixed(0)}</p>
+                              <span className={`mt-1 inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 ${
+                                !card.isActive || isExpired ? 'bg-slate-100 text-slate-500'
+                                : card.balance <= 0 ? 'bg-slate-100 text-slate-500'
+                                : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {!card.isActive || isExpired ? 'Inactive' : card.balance <= 0 ? 'Used up' : 'Active'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <div className="h-1.5 w-full rounded-full bg-slate-100">
+                              <div
+                                className="h-1.5 rounded-full bg-indigo-500 transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <p className="mt-1 text-[10px] text-slate-400">{pct}% used</p>
+                          </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-lg font-black text-slate-900">₹{card.balance.toFixed(0)}</p>
-                          <p className="text-xs text-slate-400">of ₹{card.initialAmount.toFixed(0)}</p>
-                          <span className={`mt-1 inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 ${
-                            !card.isActive || isExpired ? 'bg-slate-100 text-slate-500'
-                            : card.balance <= 0 ? 'bg-slate-100 text-slate-500'
-                            : 'bg-emerald-100 text-emerald-700'
-                          }`}>
-                            {!card.isActive || isExpired ? 'Inactive' : card.balance <= 0 ? 'Used up' : 'Active'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <div className="h-1.5 w-full rounded-full bg-slate-100">
-                          <div
-                            className="h-1.5 rounded-full bg-indigo-500 transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[10px] text-slate-400">{pct}% used</p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

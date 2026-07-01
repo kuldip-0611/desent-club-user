@@ -753,7 +753,62 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
           {trackingLoading ? (
             <p className="mt-3 text-sm text-slate-400">Loading tracking info…</p>
           ) : tracking ? (
-            <div className="mt-3 space-y-3 text-sm">
+            <div className="mt-3 space-y-4 text-sm">
+              {/* Shipping progress steps */}
+              {(() => {
+                const STEPS = [
+                  { key: 'PICKUP SCHEDULED', label: 'Pickup Scheduled', icon: '📅' },
+                  { key: 'PICKED UP',        label: 'Picked Up',        icon: '📦' },
+                  { key: 'IN TRANSIT',       label: 'In Transit',       icon: '🚚' },
+                  { key: 'OUT FOR DELIVERY', label: 'Out for Delivery', icon: '🏠' },
+                  { key: 'DELIVERED',        label: 'Delivered',        icon: '✅' },
+                ]
+                const RANK: Record<string, number> = {
+                  'LABEL GENERATED': 0, 'PICKUP SCHEDULED': 1, 'PICKUP GENERATED': 1,
+                  'READY TO SHIP': 1, 'PICKED UP': 2, 'MANIFESTED': 2,
+                  'SHIPPED': 3, 'IN TRANSIT': 3, 'OUT FOR DELIVERY': 4,
+                  'NDR': 4, 'DELIVERED': 5,
+                }
+                const srStatus = tracking.shippingStatus?.toUpperCase() ?? ''
+                const currentRank = RANK[srStatus] ?? -1
+                if (currentRank < 0) return null
+                // progress % for the line: from first step (rank 1) to last (rank 5)
+                const pct = Math.min(((currentRank - 1) / (STEPS.length - 1)) * 100, 100)
+                return (
+                  <div className="mb-1 pb-1">
+                    <div className="relative flex items-start justify-between">
+                      {/* background line */}
+                      <div className="absolute left-0 right-0 top-[18px] h-0.5 bg-slate-200 dark:bg-slate-700" />
+                      {/* filled progress line */}
+                      <div
+                        className="absolute left-0 top-[18px] h-0.5 bg-slate-900 transition-all duration-500 dark:bg-white"
+                        style={{ width: `${pct}%` }}
+                      />
+                      {STEPS.map((step, i) => {
+                        const stepRank = i + 1
+                        const done = currentRank >= stepRank
+                        const active = currentRank === stepRank
+                        return (
+                          <div key={step.key} className="relative z-10 flex flex-1 flex-col items-center text-center">
+                            <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm shadow-sm transition-all duration-300 ${
+                              done
+                                ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+                                : 'border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500'
+                            } ${active ? 'ring-4 ring-slate-200 dark:ring-slate-600' : ''}`}>
+                              {done ? <span>{step.icon}</span> : <span className="text-xs font-bold">{i + 1}</span>}
+                            </div>
+                            <p className={`mt-2 max-w-[60px] text-[10px] leading-tight sm:text-xs ${
+                              done ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-400'
+                            } ${active ? 'text-slate-900 dark:text-white' : ''}`}>
+                              {step.label}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
               {tracking.awbCode ? (
                 <>
                   <div className="flex flex-wrap gap-4">
@@ -1048,9 +1103,17 @@ export const OrderDetailPageModule = ({ orderId }: OrderDetailPageModuleProps) =
         </section>
       )}
 
-      {/* ── Shipped: size/address change blocked ── */}
-      {order.status === 'SHIPPED' || order.status === 'PROCESSING' ? (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+      {/* ── PROCESSING: pickup scheduled, not yet with courier ── */}
+      {order.status === 'PROCESSING' ? (
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
+          <p className="font-semibold">Your order is being packed</p>
+          <p className="mt-0.5 text-xs">We&apos;re preparing your order and scheduling courier pickup. You&apos;ll get an update once it&apos;s on the way.</p>
+        </div>
+      ) : null}
+
+      {/* ── SHIPPED: courier has it ── */}
+      {order.status === 'SHIPPED' ? (
+        <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
           <p className="font-semibold">Your order is on its way</p>
           <p className="mt-0.5 text-xs">Size or address changes are not possible once shipped. If the size is wrong after delivery, use <strong>Request exchange</strong>.</p>
         </div>

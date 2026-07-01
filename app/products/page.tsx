@@ -4,7 +4,7 @@ import { ProductsPageModule } from '@/modules/shop/products-page'
 import { SITE_URL } from '@/constants/site'
 
 type ProductsRouteProps = {
-  searchParams: Promise<{ category?: string; audience?: string; subcategory?: string; page?: string }>
+  searchParams: Promise<{ category?: string; audience?: string; subcategory?: string; page?: string; search?: string; bundleId?: string }>
 }
 
 export async function generateMetadata({ searchParams }: ProductsRouteProps): Promise<Metadata> {
@@ -33,6 +33,8 @@ export default async function ProductsRoute({ searchParams }: ProductsRouteProps
         initialCategory={params.category ?? 'all'}
         initialAudience={params.audience ?? 'all'}
         initialSubcategory={params.subcategory ?? ''}
+        initialSearch={params.search ?? ''}
+        initialBundleId={params.bundleId ?? ''}
       />
     </StoreShell>
   )

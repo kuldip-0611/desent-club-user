@@ -9,66 +9,31 @@ export async function GET(request: NextRequest) {
   const subtitle = searchParams.get('subtitle') ?? 'Premium streetwear & essentials'
   const imageUrl = searchParams.get('image') ?? null
 
-  return new ImageResponse(
+  const imgResponse = new ImageResponse(
     (
       <div
         style={{
           width: '1200px',
           height: '630px',
           display: 'flex',
-          position: 'relative',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           fontFamily: 'sans-serif',
           overflow: 'hidden',
-          backgroundColor: '#0f172a',
         }}
       >
-        {/* Background product image */}
-        {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt=""
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center',
-            }}
-          />
-        )}
-
-        {/* Dark gradient overlay */}
+        {/* Left — text panel (solid dark = tiny PNG) */}
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            background: imageUrl
-              ? 'linear-gradient(135deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.55) 60%, rgba(15,23,42,0.3) 100%)'
-              : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          }}
-        />
-
-        {/* Content */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            padding: '64px',
+            padding: '60px 56px',
+            width: imageUrl ? '580px' : '1200px',
+            flexShrink: 0,
           }}
         >
-          {/* Brand badge */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}
-          >
+          {/* Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div
               style={{
                 backgroundColor: '#6366f1',
@@ -78,84 +43,100 @@ export async function GET(request: NextRequest) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '24px',
+                fontSize: '26px',
                 color: 'white',
-                fontWeight: 800,
+                fontWeight: 900,
               }}
             >
               D
             </div>
-            <span
-              style={{
-                color: 'white',
-                fontSize: '22px',
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-              }}
-            >
+            <span style={{ color: 'white', fontSize: '22px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Disent Club
             </span>
           </div>
 
-          {/* Main text */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.6)',
-                fontSize: '18px',
-                fontWeight: 600,
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase',
-                margin: 0,
-              }}
-            >
+          {/* Title */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ color: 'rgba(99,102,241,0.9)', fontSize: '16px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0 }}>
               {subtitle}
             </p>
             <h1
               style={{
                 color: 'white',
-                fontSize: title.length > 40 ? '52px' : '68px',
+                fontSize: title.length > 35 ? '48px' : '60px',
                 fontWeight: 900,
                 lineHeight: 1.1,
                 margin: 0,
-                maxWidth: imageUrl ? '640px' : '900px',
               }}
             >
               {title}
             </h1>
           </div>
 
-          {/* Footer */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '18px' }}>
-              dev.disentclub.com
-            </span>
+          {/* CTA */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div
               style={{
                 backgroundColor: '#6366f1',
                 color: 'white',
                 borderRadius: '999px',
-                padding: '12px 28px',
+                padding: '14px 32px',
                 fontSize: '18px',
                 fontWeight: 700,
               }}
             >
               Shop Now →
             </div>
+            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '14px' }}>
+              dev.disentclub.com
+            </span>
           </div>
         </div>
+
+        {/* Right — product image (contained, not full-bleed) */}
+        {imageUrl && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center top',
+              }}
+            />
+            {/* Subtle left-edge fade into dark panel */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: '80px',
+                background: 'linear-gradient(to right, #1e293b, transparent)',
+              }}
+            />
+          </div>
+        )}
       </div>
     ),
-    {
-      width: 1200,
-      height: 630,
-    },
+    { width: 1200, height: 630 },
   )
+
+  // Add cache headers — WhatsApp bot must be able to cache this image
+  return new Response(imgResponse.body, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+    },
+  })
 }

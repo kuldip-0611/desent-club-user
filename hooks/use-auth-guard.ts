@@ -8,7 +8,9 @@ import { useUiStore } from '@/store/ui-store'
 export const useAuthGuard = () => {
   const user = useAuthStore((s) => s.user)
   const openAuthModal = useUiStore((s) => s.openAuthModal)
-  const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated())
+  const [hydrated, setHydrated] = useState(() => {
+    try { return useAuthStore.persist.hasHydrated() } catch { return false }
+  })
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
