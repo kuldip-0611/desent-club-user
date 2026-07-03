@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { X, ChevronLeft, ChevronRight, ZoomIn, Ruler, Share2, MessageCircle, Link2, Check } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { X, ChevronLeft, ChevronRight, ZoomIn, Ruler, Share2, Truck, RotateCcw, ShieldCheck, CreditCard, ChevronDown, ChevronUp, Shirt, Package, Phone, Banknote, Check } from 'lucide-react'
 import { ProductCard } from '@/modules/shop/components/product-card'
 import { Button } from '@/components/ui/button'
 import { useProductQuery, useRelatedProductsQuery } from '@/hooks/query/use-products-query'
@@ -41,6 +42,7 @@ const StarRow = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' }
 )
 
 export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetailPageProps) => {
+  const router = useRouter()
   const addLine = useCartStore((s) => s.addLine)
   const user = useAuthStore((s) => s.user)
   const { data: product, isLoading } = useProductQuery(slug)
@@ -88,12 +90,19 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
   const [sizeChart, setSizeChart] = useState<SizeChartData | null>(null)
+  const [chartUnit, setChartUnit] = useState<'cm' | 'in'>('cm')
   const [linkCopied, setLinkCopied] = useState(false)
   const [activeBundle, setActiveBundle] = useState<ActiveBundle | null>(null)
   const [notifyEmail, setNotifyEmail] = useState('')
   const [notifySize, setNotifySize] = useState('')
   const [notifySubmitting, setNotifySubmitting] = useState(false)
   const [notifySuccess, setNotifySuccess] = useState(false)
+
+  // Accordion sections
+  const [openAccordion, setOpenAccordion] = useState<string | null>('highlights')
+  const toggleAccordion = (key: string) => setOpenAccordion((prev) => (prev === key ? null : key))
+  const [cartAdded, setCartAdded] = useState(false)
+  const cartAddedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Review submit
   const [reviewRating, setReviewRating] = useState(5)
@@ -104,11 +113,24 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
   const [deliveredItems, setDeliveredItems] = useState<{ id: string; name: string; orderId: string }[]>([])
   const [hasPendingOrder, setHasPendingOrder] = useState(false)
 
-  const handleShare = async (platform: 'whatsapp' | 'copy') => {
+  const handleShare = async (platform: 'native' | 'whatsapp' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
-    const text = `Check out ${product?.name ?? 'this product'} on Disent Club! ${url}`
-    if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+    const text = `Check out ${product?.name ?? 'this product'} on Disent Club!`
+    if (platform === 'native') {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({ title: product?.name ?? 'Disent Club', text, url })
+        } catch {
+          // user cancelled — ignore
+        }
+      } else {
+        // fallback: copy link
+        await navigator.clipboard.writeText(url)
+        setLinkCopied(true)
+        setTimeout(() => setLinkCopied(false), 2000)
+      }
+    } else if (platform === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, '_blank')
     } else {
       await navigator.clipboard.writeText(url)
       setLinkCopied(true)
@@ -325,9 +347,9 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
 
   if (isLoading || !product) {
     return (
-      <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-[1440px] space-y-10 px-4 py-8 sm:px-8">
         <section className="grid gap-8 lg:grid-cols-2">
-          {/* Image skeleton */}
+          {/* ── Image gallery skeleton ── */}
           <div className="space-y-3">
             <div className="aspect-[4/5] animate-pulse rounded-3xl bg-slate-200 dark:bg-slate-800" />
             <div className="grid grid-cols-4 gap-2">
@@ -336,43 +358,87 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
               ))}
             </div>
           </div>
-          {/* Info skeleton */}
-          <div className="space-y-5">
-            {/* Breadcrumb */}
-            <div className="flex gap-2">
-              <div className="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-              <div className="h-3 w-3 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
-              <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+
+          {/* ── Info skeleton ── */}
+          <div className="space-y-4">
+            {/* Breadcrumb + share button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                <div className="h-3 w-2 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              </div>
+              <div className="h-7 w-20 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
             </div>
+
             {/* Title */}
             <div className="space-y-2">
               <div className="h-8 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
               <div className="h-8 w-1/2 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
             </div>
+
             {/* Rating */}
-            <div className="h-4 w-32 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+            <div className="h-4 w-28 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+
             {/* Description */}
             <div className="space-y-2">
               <div className="h-3 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
               <div className="h-3 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
               <div className="h-3 w-2/3 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
             </div>
+
             {/* Price */}
-            <div className="h-8 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-            {/* Stock badge */}
-            <div className="h-6 w-20 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
-            {/* Size label */}
-            <div className="h-4 w-16 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
-            {/* Size buttons */}
-            <div className="flex gap-2">
-              {['XS','S','M','L','XL'].map((s) => (
-                <div key={s} className="h-10 w-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
-              ))}
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-5 w-16 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
             </div>
+
+            {/* Stock badge */}
+            <div className="h-7 w-24 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800" />
+
+            {/* Size selector */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-16 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                <div className="h-3.5 w-20 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              </div>
+              <div className="flex gap-2">
+                {['XS', 'S', 'M', 'L', 'XL'].map((s) => (
+                  <div key={s} className="h-10 w-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+                ))}
+              </div>
+            </div>
+
+            {/* Color selector */}
+            <div className="space-y-2">
+              <div className="h-4 w-14 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              <div className="h-10 w-28 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+            </div>
+
             {/* CTA buttons */}
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="h-11 animate-pulse rounded-lg bg-slate-300 dark:bg-slate-600" />
-              <div className="h-11 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+              <div className="h-11 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+            </div>
+
+            {/* Trust badges */}
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-3 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                </div>
+              ))}
+            </div>
+
+            {/* Accordion sections */}
+            <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-3.5">
+                  <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-4 w-4 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -383,7 +449,7 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
   const hasReviews = reviewStats.reviewsCount > 0
 
   return (
-    <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1440px] space-y-10 px-4 py-8 sm:px-8">
       <section className="grid gap-8 lg:grid-cols-2">
         {/* ── Image gallery ── */}
         <div className="space-y-3">
@@ -444,35 +510,44 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
 
         {/* ── Product info ── */}
         <div className="space-y-4">
-          <nav className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-            {fromSale ? (
-              <>
-                <Link href={saleId ? `/sale/${saleId}` : '/sale'} className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20 dark:hover:bg-amber-400/20">
-                  <ChevronLeft className="h-3 w-3" /> Back to Sale
-                </Link>
-                <span>/</span>
-              </>
-            ) : (
-              <>
-                <Link href="/products" className="hover:text-slate-600">Products</Link>
-                <span>/</span>
-              </>
-            )}
-            <Link href={`/products?category=${product.category.slug}`} className="hover:text-slate-600">
-              {product.category.name}
-            </Link>
-            {product.subcategory ? (
-              <>
-                <span>/</span>
-                <Link
-                  href={`/products?category=${product.category.slug}&subcategory=${product.subcategory.slug}`}
-                  className="hover:text-slate-600"
-                >
-                  {product.subcategory.name}
-                </Link>
-              </>
-            ) : null}
-          </nav>
+          <div className="flex items-center justify-between gap-2">
+            <nav className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+              {fromSale ? (
+                <>
+                  <Link href={saleId ? `/sale/${saleId}` : '/sale'} className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20 dark:hover:bg-amber-400/20">
+                    <ChevronLeft className="h-3 w-3" /> Back to Sale
+                  </Link>
+                  <span>/</span>
+                </>
+              ) : (
+                <>
+                  <Link href="/products" className="hover:text-slate-600">Products</Link>
+                  <span>/</span>
+                </>
+              )}
+              <Link href={`/products?category=${product.category.slug}`} className="hover:text-slate-600">
+                {product.category.name}
+              </Link>
+              {product.subcategory ? (
+                <>
+                  <span>/</span>
+                  <Link
+                    href={`/products?category=${product.category.slug}&subcategory=${product.subcategory.slug}`}
+                    className="hover:text-slate-600"
+                  >
+                    {product.subcategory.name}
+                  </Link>
+                </>
+              ) : null}
+            </nav>
+            <button
+              type="button"
+              onClick={() => void handleShare('native')}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <Share2 className="h-3.5 w-3.5" /> Share
+            </button>
+          </div>
 
           <h1 className="text-3xl font-black">{product.name}</h1>
 
@@ -628,7 +703,45 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
           )}
 
           <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              disabled={isOutOfStock || !variant || cartAdded}
+              onClick={() => {
+                if (!variant || isOutOfStock || cartAdded) return
+                addLine({
+                  productId: product.id,
+                  variantId: variant.id,
+                  categoryId: product.category.id,
+                  name: product.name,
+                  slug: product.slug,
+                  image: displayImages[0] ?? product.images[0],
+                  size: variant.size,
+                  color: variant.colorName,
+                  unitPrice: displayPrice,
+                  quantity: 1,
+                })
+                setCartAdded(true)
+                if (cartAddedTimerRef.current) clearTimeout(cartAddedTimerRef.current)
+                cartAddedTimerRef.current = setTimeout(() => setCartAdded(false), 1500)
+              }}
+              className={`relative flex items-center justify-center gap-2 overflow-hidden rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-300 ${
+                isOutOfStock || !variant
+                  ? 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'
+                  : cartAdded
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100'
+              }`}
+            >
+              {cartAdded ? (
+                <>
+                  <Check className="h-4 w-4 animate-[scale-in_0.2s_ease-out]" />
+                  Added!
+                </>
+              ) : (
+                isOutOfStock ? 'Out of Stock' : 'Add to cart'
+              )}
+            </button>
             <Button
+              variant="outline"
               disabled={isOutOfStock || !variant}
               onClick={() => {
                 if (!variant || isOutOfStock) return
@@ -644,11 +757,9 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
                   unitPrice: displayPrice,
                   quantity: 1,
                 })
+                router.push('/cart')
               }}
             >
-              {isOutOfStock ? 'Out of Stock' : 'Add to cart'}
-            </Button>
-            <Button variant="outline" disabled={isOutOfStock}>
               {isOutOfStock ? 'Sold Out' : 'Buy now'}
             </Button>
           </div>
@@ -699,31 +810,168 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
             </div>
           )}
 
-          {/* ── Share buttons ── */}
-          <div className="flex items-center gap-2 pt-2">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-              <Share2 className="h-3.5 w-3.5" /> Share
-            </span>
-            <button
-              type="button"
-              onClick={() => void handleShare('whatsapp')}
-              className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              WhatsApp
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleShare('copy')}
-              className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
-            >
-              {linkCopied ? (
-                <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied!</>
-              ) : (
-                <><Link2 className="h-3.5 w-3.5" /> Copy link</>
-              )}
-            </button>
+          {/* ── Trust badges ── */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+            <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+              <Truck className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>Free delivery across India</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+              <RotateCcw className="h-4 w-4 shrink-0 text-blue-600" />
+              <span>7-day easy returns</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-violet-600" />
+              <span>100% authentic products</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+              <CreditCard className="h-4 w-4 shrink-0 text-orange-500" />
+              <span>Cash on delivery available</span>
+            </div>
           </div>
+
+          {/* ── Accordion info sections ── */}
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+            {/* Highlights */}
+            {product.description && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion('highlights')}
+                  className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    <Shirt className="h-4 w-4 text-slate-500" /> Product Highlights
+                  </span>
+                  {openAccordion === 'highlights' ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                </button>
+                {openAccordion === 'highlights' && (
+                  <div className="px-4 pb-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                    <p>{product.description}</p>
+                    {product.materials && product.materials.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {product.materials.map((m) => (
+                          <span key={m.name} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                            {m.percent ? `${m.percent}% ` : ''}{m.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {product.audience && product.audience !== 'UNISEX' && (
+                      <p className="mt-3 text-xs text-slate-500">For: <span className="font-medium capitalize">{product.audience.toLowerCase()}</span></p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Fabric & Care */}
+            <div>
+              <button
+                type="button"
+                onClick={() => toggleAccordion('care')}
+                className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+              >
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Fabric & Care</span>
+                {openAccordion === 'care' ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+              </button>
+              {openAccordion === 'care' && (
+                <div className="px-4 pb-5 space-y-4">
+                  {/* Fabric composition with progress bars */}
+                  {product.materials && product.materials.length > 0 && (
+                    <div>
+                      <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Fabric Composition</p>
+                      <div className="space-y-2.5">
+                        {product.materials.map((m) => (
+                          <div key={m.name}>
+                            <div className="mb-1 flex items-center justify-between text-sm">
+                              <span className="font-medium text-slate-700 dark:text-slate-300">{m.name}</span>
+                              {m.percent != null && (
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{m.percent}%</span>
+                              )}
+                            </div>
+                            {m.percent != null && (
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                                <div
+                                  className="h-full rounded-full bg-slate-800 dark:bg-slate-300"
+                                  style={{ width: `${m.percent}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Care instructions */}
+                  <div>
+                    <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Care Instructions</p>
+                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                      {[
+                        'Machine wash cold, gentle cycle',
+                        'Do not bleach or tumble dry',
+                        'Iron on low heat, inside out',
+                        'Dry clean not recommended',
+                      ].map((tip) => (
+                        <div key={tip} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                          {tip}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Made in India</p>
+                </div>
+              )}
+            </div>
+
+            {/* Delivery */}
+            <div>
+              <button
+                type="button"
+                onClick={() => toggleAccordion('delivery')}
+                className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+              >
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Delivery & Shipping</span>
+                {openAccordion === 'delivery' ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+              </button>
+              {openAccordion === 'delivery' && (
+                <div className="px-4 pb-4">
+                  <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                    <li className="flex items-start gap-2"><Truck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> Free shipping on all orders across India</li>
+                    <li className="flex items-start gap-2"><Package className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" /> Orders dispatched in 1–2 business days</li>
+                    <li className="flex items-start gap-2"><Truck className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" /> Delivered in 3–7 business days</li>
+                    <li className="flex items-start gap-2"><Banknote className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /> Cash on delivery available</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Returns */}
+            <div>
+              <button
+                type="button"
+                onClick={() => toggleAccordion('returns')}
+                className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+              >
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Returns & Exchange</span>
+                {openAccordion === 'returns' ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+              </button>
+              {openAccordion === 'returns' && (
+                <div className="px-4 pb-4">
+                  <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                    <li className="flex items-start gap-2"><RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" /> 7-day return/exchange from delivery date</li>
+                    <li className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" /> Item must be unused, unwashed, with tags intact</li>
+                    <li className="flex items-start gap-2"><Banknote className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> Full refund for prepaid orders</li>
+                    <li className="flex items-start gap-2"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" /> Contact our support to initiate a return</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -775,12 +1023,40 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
       {/* ── Size Guide modal ── */}
       {sizeGuideOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSizeGuideOpen(false)}>
-          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setSizeGuideOpen(false)} className="absolute right-4 top-4 rounded-full p-1.5 hover:bg-slate-100">
-              <X className="h-4 w-4" />
-            </button>
-            <h2 className="text-xl font-bold">Size Guide</h2>
-            <p className="mt-1 text-sm text-slate-500">All measurements in cm. For the best fit, compare your body measurements.</p>
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+            {/* Header row: title + toggle + close */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold dark:text-slate-100">Size Guide</h2>
+                <p className="mt-0.5 text-sm text-slate-500">For the best fit, compare your body measurements.</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {/* CM / Inches toggle */}
+                <div className="flex items-center rounded-xl border border-slate-200 p-0.5 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setChartUnit('cm')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${chartUnit === 'cm' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'}`}
+                  >
+                    CM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartUnit('in')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${chartUnit === 'in' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'}`}
+                  >
+                    Inches
+                  </button>
+                </div>
+                {/* Close button */}
+                <button
+                  onClick={() => setSizeGuideOpen(false)}
+                  className="rounded-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                </button>
+              </div>
+            </div>
 
             {!sizeChart ? (
               <p className="mt-6 text-sm text-slate-400">Loading size chart…</p>
@@ -790,24 +1066,33 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Size</th>
+                    <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Size</th>
                       {sizeChart.attributes.map((attr) => (
-                        <th key={attr.slug} className="px-4 py-3 text-left font-semibold text-slate-700">
-                          {attr.label}{attr.unit ? ` (${attr.unit})` : ''}
+                        <th key={attr.slug} className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">
+                          {attr.label} ({chartUnit === 'cm' ? 'cm' : 'in'})
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {sizeChart.rows.map((row, i) => (
-                      <tr key={row.size} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                        <td className="px-4 py-3 font-semibold text-slate-900">{row.size}</td>
-                        {sizeChart.attributes.map((attr) => (
-                          <td key={attr.slug} className="px-4 py-3 text-slate-600">
-                            {row.values[attr.slug] ?? '—'}
-                          </td>
-                        ))}
+                      <tr key={row.size} className={i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/60'}>
+                        <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">{row.size}</td>
+                        {sizeChart.attributes.map((attr) => {
+                          const raw = row.values[attr.slug]
+                          const num = raw ? parseFloat(raw) : null
+                          const display = num !== null && !isNaN(num)
+                            ? chartUnit === 'in'
+                              ? (num / 2.54).toFixed(1)
+                              : raw
+                            : (raw ?? '—')
+                          return (
+                            <td key={attr.slug} className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                              {display}
+                            </td>
+                          )
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -815,7 +1100,7 @@ export const ProductDetailPageModule = ({ slug, fromSale, saleId }: ProductDetai
               </div>
             )}
 
-            <div className="mt-5 rounded-xl bg-slate-100 p-4 text-sm text-slate-800">
+            <div className="mt-5 rounded-xl bg-slate-100 p-4 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-200">
               <strong>How to measure:</strong> Use a soft measuring tape. Keep it snug but not tight. Chest = fullest part of chest. Waist = narrowest point of torso.
             </div>
           </div>

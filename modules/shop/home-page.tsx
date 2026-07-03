@@ -199,7 +199,7 @@ export const HomePageModule = () => {
   const newArrivals = data?.newest ?? []
 
   return (
-    <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1440px] space-y-8 px-4 py-8 sm:px-8">
       <section>
         {isLoading ? (
           <div className={`grid items-stretch gap-4 ${perSlide === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>

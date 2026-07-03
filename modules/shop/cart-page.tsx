@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
-import { Heart, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, Truck, ShieldCheck, Gift, Star, Zap, X } from 'lucide-react'
+import { Heart, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, Truck, ShieldCheck, Gift, Star, Zap, X, RotateCcw, CreditCard, Headphones, BadgeCheck } from 'lucide-react'
 import { CartCouponsSection } from '@/modules/shop/components/cart-coupons-section'
 import { getCartSummary, getFreeShippingThreshold, getShippingFee, useCartStore } from '@/store/cart-store'
 import { useWishlistStore } from '@/store/wishlist-store'
@@ -49,6 +49,7 @@ export const CartPageModule = () => {
   const lines = useCartStore((s) => s.lines)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeLine = useCartStore((s) => s.removeLine)
+  const clearCart = useCartStore((s) => s.clear)
   const couponDiscount = useCartStore((s) => s.couponDiscount)
   const giftCardApplied = useCartStore((s) => s.giftCardApplied)
   const applyGiftCard = useCartStore((s) => s.applyGiftCard)
@@ -62,6 +63,7 @@ export const CartPageModule = () => {
   const summary = useMemo(() => getCartSummary(lines, couponDiscount, gstRate), [lines, couponDiscount, gstRate])
   const [bundleDeal, setBundleDeal] = useState<CartBundleResult>(null)
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   // Gift card input state
   const [giftCardInput, setGiftCardInput] = useState('')
@@ -141,7 +143,7 @@ export const CartPageModule = () => {
 
   if (lines.length === 0) {
     return (
-      <main className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-4 py-16 text-center">
+      <main className="mx-auto flex min-h-[70vh] max-w-[1440px] flex-col items-center justify-center px-4 py-16 text-center sm:px-8">
         <div className="mb-6 flex h-28 w-28 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
           <ShoppingBag className="h-14 w-14 text-slate-300 dark:text-slate-600" strokeWidth={1.2} />
         </div>
@@ -157,12 +159,44 @@ export const CartPageModule = () => {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Shopping Cart</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {lines.length} item{lines.length !== 1 ? 's' : ''} in your cart
-        </p>
+    <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
+
+      {/* Trust strip */}
+      <div className="mb-6 -mx-1 overflow-x-auto">
+        <div className="flex gap-3 px-1 pb-1" style={{ width: 'max-content' }}>
+          {[
+            { icon: <RotateCcw size={15} className="text-emerald-600 dark:text-emerald-400" />, bg: 'bg-emerald-50 dark:bg-emerald-950/40', title: '7-Day Easy Returns', sub: 'No questions asked' },
+            { icon: <Truck size={15} className="text-blue-600 dark:text-blue-400" />, bg: 'bg-blue-50 dark:bg-blue-950/40', title: 'Fast Tracked Delivery', sub: 'Ships within 24 hrs' },
+            { icon: <ShieldCheck size={15} className="text-violet-600 dark:text-violet-400" />, bg: 'bg-violet-50 dark:bg-violet-950/40', title: '100% Secure Payments', sub: 'SSL encrypted checkout' },
+            { icon: <BadgeCheck size={15} className="text-amber-600 dark:text-amber-400" />, bg: 'bg-amber-50 dark:bg-amber-950/40', title: 'Quality Guaranteed', sub: 'Defect? Free replacement' },
+            { icon: <Headphones size={15} className="text-rose-600 dark:text-rose-400" />, bg: 'bg-rose-50 dark:bg-rose-950/40', title: '24/7 Support', sub: 'Always here to help' },
+            { icon: <CreditCard size={15} className="text-indigo-600 dark:text-indigo-400" />, bg: 'bg-indigo-50 dark:bg-indigo-950/40', title: 'UPI · Cards · COD', sub: 'Multiple payment options' },
+          ].map(({ icon, bg, title, sub }) => (
+            <div key={title} className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900 min-w-[190px]">
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${bg}`}>{icon}</div>
+              <div>
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">{title}</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">{sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Shopping Cart</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {lines.length} item{lines.length !== 1 ? 's' : ''} in your cart
+          </p>
+        </div>
+        <button
+          onClick={() => setShowClearConfirm(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Clear cart
+        </button>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
@@ -443,9 +477,17 @@ export const CartPageModule = () => {
 
             <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
               <ShieldCheck size={12} className="shrink-0 text-emerald-500" />
-              Secure checkout · 3-day easy returns
+              Secure checkout · SSL encrypted
+            </div>
+
+            {/* Payment icons */}
+            <div className="mt-3 flex items-center justify-center gap-2">
+              {['VISA', 'MC', 'UPI', 'GPay'].map((m) => (
+                <span key={m} className="rounded border border-slate-200 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-slate-400 dark:border-slate-700 dark:text-slate-500">{m}</span>
+              ))}
             </div>
           </div>
+
 
           {freeShippingThreshold > 0 && summary.shipping > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
@@ -455,6 +497,37 @@ export const CartPageModule = () => {
           )}
         </aside>
       </div>
+      {/* Clear cart confirmation modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowClearConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40">
+              <Trash2 className="h-5 w-5 text-red-500" />
+            </div>
+            <h3 className="mb-1 text-base font-bold text-slate-900 dark:text-white">Clear entire cart?</h3>
+            <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
+              This will remove all {lines.length} item{lines.length !== 1 ? 's' : ''} from your cart. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Keep items
+              </button>
+              <button
+                type="button"
+                onClick={() => { clearCart(); toast.success('Cart cleared'); setShowClearConfirm(false) }}
+                className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                Yes, clear cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

@@ -14,6 +14,7 @@ type CartState = {
   couponCode: string | null
   couponDiscount: number
   loading: boolean
+  _hydrated: boolean
   // Gift card
   giftCardApplied: { code: string; balance: number } | null
   // Loyalty
@@ -117,6 +118,7 @@ export const useCartStore = create<CartState>()(
       couponCode: null,
       couponDiscount: 0,
       loading: false,
+      _hydrated: false,
       giftCardApplied: null,
       loyaltyApplied: false,
 
@@ -208,6 +210,9 @@ export const useCartStore = create<CartState>()(
         giftCardApplied: state.giftCardApplied,
         loyaltyApplied: state.loyaltyApplied,
       }),
+      onRehydrateStorage: () => () => {
+        useCartStore.setState({ _hydrated: true })
+      },
       // Skip auto-hydration on store creation — prevents SSR/client race condition
       // where Next.js App Router mounts client components before persist can read
       // from localStorage. We call rehydrate() explicitly in StoreInitializer.

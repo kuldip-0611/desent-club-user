@@ -303,7 +303,7 @@ export const SaleDetailPageModule = ({ saleId }: { saleId: string }) => {
   }, [fetchPage, loading])
 
   if (loading) return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
       {/* Back link skeleton */}
       <div className="mb-5 h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
 
@@ -359,7 +359,7 @@ export const SaleDetailPageModule = ({ saleId }: { saleId: string }) => {
   const { sale, items, total } = data
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-8">
       <Link href="/sale" className="mb-5 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
         <ArrowLeft size={14} /> All Sales
       </Link>

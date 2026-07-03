@@ -8,7 +8,8 @@ export const SHOP_CATEGORIES = [
 export const MAIN_NAV = [
   { label: 'Home', href: '/home' },
   { label: 'Products', href: '/products' },
-  { label: '⚡ Sale', href: '/sale' },
+  { label: 'Sale', href: '/sale' },
+  { label: 'Combos', href: '/combos' },
   { label: 'Orders', href: '/orders' },
   { label: 'Gift Cards', href: '/gift-cards' },
 ]

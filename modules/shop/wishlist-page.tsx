@@ -68,7 +68,7 @@ export const WishlistPageModule = () => {
   }
 
   return (
-    <main className="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6">
+    <main className="mx-auto max-w-[1440px] space-y-4 px-4 py-8 sm:px-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Wishlist</h1>
         {items.length > 0 && (

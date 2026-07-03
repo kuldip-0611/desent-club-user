@@ -386,7 +386,7 @@ export const SalePageModule = () => {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-[1440px] space-y-10 px-4 py-10 sm:px-8">
         {/* Banner skeleton */}
         <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -445,7 +445,7 @@ export const SalePageModule = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[1440px] space-y-12 px-4 py-10 sm:px-8">
       {/* Bundle Deals section */}
       <DealsSection bundles={bundles} />
 

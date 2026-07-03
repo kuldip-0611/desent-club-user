@@ -15,7 +15,7 @@ export const Footer = () => {
 
   return (
     <footer className="mt-16 border-t border-slate-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-[1440px] px-4 py-12 sm:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
 
           {/* Brand — spans 2 cols on lg */}

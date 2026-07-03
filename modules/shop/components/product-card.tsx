@@ -38,6 +38,7 @@ function QuickPickModal({
 
   const [selectedSize, setSelectedSize] = useState<string | null>(sizes[0] ?? null)
   const [selectedColor, setSelectedColor] = useState<string | null>(colors[0] ?? null)
+  const [added, setAdded] = useState(false)
 
   const matchedVariant =
     product.variants.find(
@@ -159,18 +160,51 @@ function QuickPickModal({
           </div>
         )}
 
-        <button
-          disabled={!matchedVariant || isOutOfStock}
-          onClick={() => matchedVariant && onAdd(matchedVariant)}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition ${
+        <motion.button
+          disabled={!matchedVariant || isOutOfStock || added}
+          onClick={() => {
+            if (!matchedVariant || added) return
+            setAdded(true)
+            setTimeout(() => { onAdd(matchedVariant); setAdded(false) }, 700)
+          }}
+          animate={added ? { scale: [1, 1.04, 1] } : {}}
+          transition={{ duration: 0.3 }}
+          className={`relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl py-3 text-sm font-semibold transition-all duration-300 ${
             !matchedVariant || isOutOfStock
               ? 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'
-              : 'bg-slate-900 text-white hover:bg-slate-700 active:scale-95 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200'
+              : added
+                ? 'bg-emerald-500 text-white'
+                : 'bg-slate-900 text-white hover:bg-slate-700 active:scale-95 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200'
           }`}
         >
-          <ShoppingBag className="h-4 w-4" />
-          {isOutOfStock ? 'Out of stock' : 'Add to cart'}
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            {added ? (
+              <motion.span
+                key="check"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                Added to cart!
+              </motion.span>
+            ) : (
+              <motion.span
+                key="bag"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center gap-2"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {isOutOfStock ? 'Out of stock' : 'Add to cart'}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
 
         <Link
           href={`/products/${product.slug}`}

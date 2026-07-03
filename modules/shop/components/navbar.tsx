@@ -119,7 +119,7 @@ export const Navbar = () => {
           isDark ? 'border-slate-800 bg-slate-950/95 text-slate-100' : 'border-slate-200/70 bg-white/95 text-slate-900',
         )}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-4 px-4 sm:px-8">
           <button
             type="button"
             className={cn('lg:hidden', isDark ? 'text-slate-200' : 'text-slate-700')}
@@ -151,12 +151,6 @@ export const Navbar = () => {
                   )}
                 >
                   {item.label}
-                  {isActive && (
-                    <span className={cn(
-                      'absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full',
-                      isDark ? 'bg-white' : 'bg-slate-900',
-                    )} />
-                  )}
                 </Link>
               )
             })}
@@ -275,12 +269,27 @@ export const Navbar = () => {
               href="/cart"
               className={cn('relative rounded-full p-2', isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-100')}
             >
-              <ShoppingBag className="h-5 w-5" />
-              {count > 0 ? (
-                <span className="absolute -right-1 -top-1.5 rounded-full bg-slate-900 px-1.5 text-[10px] text-white">
-                  {count}
-                </span>
-              ) : null}
+              <motion.div
+                key={count}
+                animate={count > 0 ? { scale: [1, 1.35, 0.9, 1.1, 1] } : {}}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+              >
+                <ShoppingBag className="h-5 w-5" />
+              </motion.div>
+              <AnimatePresence>
+                {count > 0 && (
+                  <motion.span
+                    key={count}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                    className="absolute -right-1 -top-1.5 rounded-full bg-slate-900 px-1.5 text-[10px] text-white dark:bg-white dark:text-slate-900"
+                  >
+                    {count}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </Link>
             <button
               type="button"
@@ -323,7 +332,7 @@ export const Navbar = () => {
               exit={{ opacity: 0, y: -8 }}
               className={cn('hidden border-t lg:block', isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white')}
             >
-              <div className="mx-auto grid max-w-7xl grid-cols-4 gap-4 p-6">
+              <div className="mx-auto grid max-w-[1440px] grid-cols-4 gap-4 p-6 px-8">
                 {categories.map((cat) => (
                   <Link
                     key={cat.id}
@@ -507,15 +516,15 @@ export const Navbar = () => {
                           {cat.name}
                         </p>
                         {cat.subcategories.length > 0 ? (
-                          <div className="mt-2 space-y-0.5 border-l-2 border-slate-300 pl-3">
+                          <div className="mt-2 space-y-0.5">
                             {cat.subcategories.map((sub) => (
                               <span
                                 key={sub.id}
                                 role="link"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeMobile(); window.location.href = `/products?category=${cat.slug}&subcategory=${sub.slug}` }}
                                 className={cn(
-                                  'block cursor-pointer rounded-md py-1.5 text-xs',
-                                  isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-600 hover:text-slate-900',
+                                  'block cursor-pointer rounded-md py-1 text-xs',
+                                  isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900',
                                 )}
                               >
                                 {sub.name}
@@ -525,11 +534,27 @@ export const Navbar = () => {
                         ) : null}
                       </Link>
                     ))}
-                    <Link href="/products?audience=MEN" className={mobileLinkClass('/products?audience=MEN')} onClick={closeMobile}>
-                      Men
+                    <Link
+                      href="/products?audience=MEN"
+                      onClick={closeMobile}
+                      className={cn(
+                        'rounded-xl border p-3 transition-colors',
+                        isDark ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/60' : 'border-slate-200 bg-slate-50 hover:bg-slate-100',
+                      )}
+                    >
+                      <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>Men</p>
+                      <p className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>Shop men&apos;s fits</p>
                     </Link>
-                    <Link href="/products?audience=WOMEN" className={mobileLinkClass('/products?audience=WOMEN')} onClick={closeMobile}>
-                      Women
+                    <Link
+                      href="/products?audience=WOMEN"
+                      onClick={closeMobile}
+                      className={cn(
+                        'rounded-xl border p-3 transition-colors',
+                        isDark ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/60' : 'border-slate-200 bg-slate-50 hover:bg-slate-100',
+                      )}
+                    >
+                      <p className={cn('text-sm font-semibold', isDark ? 'text-slate-100' : 'text-slate-900')}>Women</p>
+                      <p className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>Shop women&apos;s fits</p>
                     </Link>
                   </div>
                 </div>

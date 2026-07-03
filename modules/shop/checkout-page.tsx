@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
-import { CreditCard, Banknote, CheckCircle, Zap, MapPin } from 'lucide-react'
+import { CreditCard, Banknote, CheckCircle, Zap, MapPin, ShieldCheck, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AddressesPanel } from '@/modules/shop/components/addresses-panel'
 import { useAuthGuard } from '@/hooks/use-auth-guard'
@@ -23,6 +23,7 @@ export const CheckoutPageModule = () => {
   const { requireAuth } = useAuthGuard()
   const user = useAuthStore((s) => s.user)
   const lines = useCartStore((s) => s.lines)
+  const cartHydrated = useCartStore((s) => s._hydrated)
   const clearCart = useCartStore((s) => s.clear)
   const couponDiscount = useCartStore((s) => s.couponDiscount)
   const couponCode = useCartStore((s) => s.couponCode)
@@ -34,9 +35,7 @@ export const CheckoutPageModule = () => {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [placing, setPlacing] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ONLINE')
-  const [codOtpModal, setCodOtpModal] = useState<{ orderId: string; otp: string } | null>(null)
-  const [codOtpInput, setCodOtpInput] = useState('')
-  const [codOtpVerifying, setCodOtpVerifying] = useState(false)
+  const [showCodConfirm, setShowCodConfirm] = useState(false)
 
   // Store credit
   const [storeCreditBalance, setStoreCreditBalance] = useState(0)
@@ -97,7 +96,13 @@ export const CheckoutPageModule = () => {
 
 
   const handlePlaceOrder = () => {
-    requireAuth(() => { void placeOrder() })
+    requireAuth(() => {
+      if (paymentMethod === 'COD') {
+        setShowCodConfirm(true)
+      } else {
+        void placeOrder()
+      }
+    })
   }
 
   const placeOrder = async () => {
@@ -127,12 +132,7 @@ export const CheckoutPageModule = () => {
       if (paymentMethod === 'COD') {
         clearCart()
         toast.success('Order placed! Pay cash on delivery.')
-        // Show OTP modal if backend returned an OTP
-        if (orderPayload.codOtp) {
-          setCodOtpModal({ orderId: orderPayload.orderId, otp: orderPayload.codOtp })
-        } else {
-          router.push(`/orders?placed=${orderPayload.orderId}`)
-        }
+        router.push(`/orders?placed=${orderPayload.orderId}`)
         return
       }
 
@@ -163,22 +163,6 @@ export const CheckoutPageModule = () => {
     }
   }
 
-  const handleVerifyCodOtp = async () => {
-    if (!codOtpModal || !codOtpInput.trim()) return
-    setCodOtpVerifying(true)
-    try {
-      const { apiClient } = await import('@/services/api/client')
-      await apiClient.post(`/orders/my/${codOtpModal.orderId}/verify-cod`, { otp: codOtpInput.trim() })
-      toast.success('OTP verified! Your order is confirmed.')
-      setCodOtpModal(null)
-      router.push(`/orders?placed=${codOtpModal.orderId}`)
-    } catch {
-      toast.error('Invalid OTP. Please try again.')
-    } finally {
-      setCodOtpVerifying(false)
-    }
-  }
-
   // Guest wall — show a sign-in prompt instead of a broken checkout
   if (!user) {
     return (
@@ -204,52 +188,53 @@ export const CheckoutPageModule = () => {
 
   return (
     <>
-    {/* COD OTP Modal */}
-    {codOtpModal && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl space-y-4 dark:bg-slate-900">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 mx-auto">
-            <Banknote className="h-7 w-7 text-emerald-600" />
+    {/* COD Confirmation Modal */}
+    {showCodConfirm && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCodConfirm(false)} />
+        <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+            <Banknote className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">COD Delivery OTP</h2>
-          <p className="text-sm text-slate-600">
-            Your order has been placed! We&apos;ve sent a 6-digit OTP to your email. Share it with the delivery agent when your order arrives.
+          <h3 className="mb-1 text-base font-bold text-slate-900 dark:text-white">Confirm Cash on Delivery</h3>
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+            You&apos;re placing a COD order. Please keep <span className="font-semibold text-slate-700 dark:text-slate-300">₹{finalTotal.toFixed(2)}</span> ready to pay the delivery agent when your order arrives.
           </p>
-          <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500 mb-1">Your OTP</p>
-            <p className="text-3xl font-black tracking-[0.3em] text-slate-900">{codOtpModal.otp}</p>
+          <div className="mb-5 space-y-2">
+            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+              <ShieldCheck size={14} className="shrink-0 text-emerald-500" />
+              No advance payment required
+            </div>
+            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+              <Clock size={14} className="shrink-0 text-blue-500" />
+              Pay only when your order is delivered
+            </div>
+            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+              <Banknote size={14} className="shrink-0 text-amber-500" />
+              Keep exact change ready if possible
+            </div>
           </div>
-          <p className="text-xs text-slate-400">Or enter your OTP here to pre-verify:</p>
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-xl font-bold tracking-[0.2em] outline-none focus:border-slate-900"
-            placeholder="6-digit OTP"
-            value={codOtpInput}
-            onChange={(e) => setCodOtpInput(e.target.value.replace(/\D/g, ''))}
-          />
-          <Button
-            className="w-full"
-            disabled={codOtpVerifying || codOtpInput.length !== 6}
-            onClick={() => void handleVerifyCodOtp()}
-          >
-            {codOtpVerifying ? 'Verifying…' : 'Verify & Continue'}
-          </Button>
-          <button
-            type="button"
-            className="text-sm text-slate-900 hover:underline"
-            onClick={() => {
-              setCodOtpModal(null)
-              router.push(`/orders?placed=${codOtpModal.orderId}`)
-            }}
-          >
-            I&apos;ll verify later
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setShowCodConfirm(false)}
+              className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={placing}
+              onClick={() => { setShowCodConfirm(false); void placeOrder() }}
+              className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {placing ? 'Placing…' : 'Confirm Order'}
+            </button>
+          </div>
         </div>
       </div>
     )}
-    <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[1fr_360px] sm:px-6">
+    <main className="mx-auto grid max-w-[1440px] gap-6 px-4 py-8 lg:grid-cols-[1fr_360px] sm:px-8">
       <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <div>
           <h1 className="text-2xl font-bold">Checkout</h1>
@@ -438,14 +423,16 @@ export const CheckoutPageModule = () => {
 
           <Button
             className="mt-4 w-full"
-            disabled={placing || lines.length === 0 || (Boolean(user) && !selectedAddressId)}
+            disabled={!cartHydrated || placing || lines.length === 0 || (Boolean(user) && !selectedAddressId)}
             onClick={handlePlaceOrder}
           >
-            {placing
-              ? 'Processing…'
-              : paymentMethod === 'COD'
-                ? `Place COD Order — ₹${finalTotal.toFixed(2)}`
-                : `Pay ₹${finalTotal.toFixed(2)}`}
+            {!cartHydrated
+              ? 'Loading…'
+              : placing
+                ? 'Processing…'
+                : paymentMethod === 'COD'
+                  ? `Place COD Order — ₹${finalTotal.toFixed(2)}`
+                  : `Pay ₹${finalTotal.toFixed(2)}`}
           </Button>
           <p className="mt-2 text-center text-[10px] text-slate-400">
             By placing this order you agree to our terms and conditions.
